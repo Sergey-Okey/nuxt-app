@@ -4,153 +4,94 @@
 
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Новая задача</h3>
+        <h3>Быстрое создание</h3>
         <button class="close-button" @click="$emit('close')">
           <Icon name="lucide:x" size="20" />
         </button>
       </div>
 
-      <form @submit.prevent="createTask" class="quick-create-form">
-        <div class="form-group">
-          <label class="form-label">Название задачи</label>
-          <input
-            v-model="taskData.title"
-            type="text"
-            class="input-field"
-            placeholder="Что нужно сделать?"
-            required
-            autofocus
-          />
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Категория</label>
-          <select v-model="taskData.category" class="select-field">
-            <option value="work">💼 Работа</option>
-            <option value="personal">🏠 Личное</option>
-            <option value="health">❤️ Здоровье</option>
-            <option value="learning">📚 Обучение</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Приоритет</label>
-          <div class="priority-buttons">
-            <button
-              v-for="priority in priorities"
-              :key="priority.value"
-              type="button"
-              class="priority-button"
-              :class="{ active: taskData.priority === priority.value }"
-              @click="taskData.priority = priority.value"
-            >
-              <Icon :name="priority.icon" size="16" />
-              <span>{{ priority.label }}</span>
-            </button>
+      <div class="create-options">
+        <button class="create-option" @click="createTask">
+          <div class="option-icon">
+            <Icon name="lucide:check-square" size="24" />
           </div>
-        </div>
+          <div class="option-content">
+            <h4>Задача</h4>
+            <p>Создать новую задачу</p>
+          </div>
+          <Icon name="lucide:chevron-right" size="16" />
+        </button>
 
-        <div class="form-group">
-          <label class="form-label">
-            <input
-              v-model="taskData.hasDeadline"
-              type="checkbox"
-              class="checkbox"
-            />
-            <span>Установить дедлайн</span>
-          </label>
+        <button class="create-option" @click="startTimer">
+          <div class="option-icon">
+            <Icon name="lucide:clock" size="24" />
+          </div>
+          <div class="option-content">
+            <h4>Таймер</h4>
+            <p>Начать фокус-сессию</p>
+          </div>
+          <Icon name="lucide:chevron-right" size="16" />
+        </button>
 
-          <input
-            v-if="taskData.hasDeadline"
-            v-model="taskData.deadline"
-            type="datetime-local"
-            class="input-field"
-            :min="minDate"
-          />
-        </div>
+        <button class="create-option" @click="createNote">
+          <div class="option-icon">
+            <Icon name="lucide:sticky-note" size="24" />
+          </div>
+          <div class="option-content">
+            <h4>Заметка</h4>
+            <p>Быстрая заметка</p>
+          </div>
+          <Icon name="lucide:chevron-right" size="16" />
+        </button>
 
-        <div class="form-actions">
-          <button type="button" class="cancel-button" @click="$emit('close')">
-            Отмена
-          </button>
-          <button
-            type="submit"
-            class="create-button"
-            :disabled="!taskData.title"
-          >
-            <Icon name="lucide:plus" size="16" />
-            Создать задачу
-          </button>
-        </div>
-      </form>
+        <button class="create-option" @click="createReminder">
+          <div class="option-icon">
+            <Icon name="lucide:bell" size="24" />
+          </div>
+          <div class="option-content">
+            <h4>Напоминание</h4>
+            <p>Установить напоминание</p>
+          </div>
+          <Icon name="lucide:chevron-right" size="16" />
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-interface TaskData {
-  title: string
-  category: string
-  priority: 'low' | 'medium' | 'high'
-  hasDeadline: boolean
-  deadline: string
-}
-
-// Props & Emits
-defineEmits<{
-  close: []
-  created: [task: any]
-}>()
-
-// Task data
-const taskData = ref<TaskData>({
-  title: '',
-  category: 'work',
-  priority: 'medium',
-  hasDeadline: false,
-  deadline: '',
-})
-
-// Priority options
-const priorities = [
-  { value: 'low', label: 'Низкий', icon: 'lucide:arrow-down' },
-  { value: 'medium', label: 'Средний', icon: 'lucide:minus' },
-  { value: 'high', label: 'Высокий', icon: 'lucide:arrow-up' },
-]
-
-// Min date for deadline (today)
-const minDate = computed(() => {
-  return new Date().toISOString().slice(0, 16)
-})
-
 // Methods
 const createTask = () => {
-  const task = {
-    ...taskData.value,
-    id: Date.now().toString(),
-    createdAt: new Date(),
-    status: 'active' as const,
-  }
-
-  // Emit the created task
-  emit('created', task)
-
-  // Reset form
-  taskData.value = {
-    title: '',
-    category: 'work',
-    priority: 'medium',
-    hasDeadline: false,
-    deadline: '',
-  }
-
-  // Close modal
+  console.log('Create task')
+  // Здесь можно открыть расширенную форму создания задачи
   emit('close')
+}
+
+const startTimer = () => {
+  console.log('Start timer')
+  navigateTo('/timer')
+  emit('close')
+}
+
+const createNote = () => {
+  console.log('Create note')
+  emit('close')
+}
+
+const createReminder = () => {
+  console.log('Create reminder')
+  emit('close')
+}
+
+// Navigation
+const router = useRouter()
+
+const navigateTo = (route: string) => {
+  router.push(route)
 }
 
 const { emit } = defineEmits<{
   close: []
-  created: [task: any]
 }>()
 </script>
 
@@ -183,9 +124,7 @@ const { emit } = defineEmits<{
   background: var(--card-bg);
   border-radius: var(--radius-card);
   width: 100%;
-  max-width: 480px;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-width: 400px;
   box-shadow: var(--shadow-xl);
   animation: scaleIn 0.3s ease-out;
 }
@@ -231,124 +170,60 @@ const { emit } = defineEmits<{
   }
 }
 
-.quick-create-form {
-  padding: var(--space-5);
+.create-options {
+  padding: var(--space-2);
 }
 
-.form-group {
-  margin-bottom: var(--space-5);
-}
-
-.form-label {
-  display: block;
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--text-primary);
-  margin-bottom: var(--space-2);
-}
-
-.input-field,
-.select-field {
-  width: 100%;
-  padding: var(--space-3) var(--space-4);
-  background: var(--surface-bg);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-button);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  transition: all var(--duration-base);
-
-  &:focus {
-    outline: none;
-    border-color: var(--accent-primary);
-    box-shadow: 0 0 0 2px rgba(93, 95, 239, 0.2);
-  }
-
-  &::placeholder {
-    color: var(--text-muted);
-  }
-}
-
-.priority-buttons {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-2);
-}
-
-.priority-button {
+.create-option {
   @include button-reset;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-3);
-  background: var(--surface-bg);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-button);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  transition: all var(--duration-base);
-
-  &:hover {
-    border-color: var(--accent-primary);
-  }
-
-  &.active {
-    background: var(--accent-primary);
-    color: white;
-    border-color: var(--accent-primary);
-  }
-}
-
-.checkbox {
-  margin-right: var(--space-2);
-}
-
-.form-actions {
-  display: flex;
   gap: var(--space-3);
-  margin-top: var(--space-6);
-}
-
-.cancel-button {
-  @include button-reset;
-  flex: 1;
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-button);
-  background: var(--surface-bg);
-  color: var(--text-secondary);
-  font-weight: var(--font-medium);
+  width: 100%;
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
   transition: all var(--duration-base);
+  margin-bottom: var(--space-1);
 
   &:hover {
-    background: var(--accent-primary);
-    color: white;
+    background: var(--surface-bg);
+    transform: translateX(4px);
+  }
+
+  &:last-child {
+    margin-bottom: 0;
   }
 }
 
-.create-button {
-  @include button-reset;
-  flex: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-button);
-  background: var(--accent-primary);
-  color: white;
-  font-weight: var(--font-medium);
-  transition: all var(--duration-base);
+.option-icon {
+  @include flex-center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-base);
+  background: var(--surface-bg);
+  color: var(--accent-primary);
+  flex-shrink: 0;
+}
 
-  &:hover:not(:disabled) {
-    background: var(--accent-primary);
-    opacity: 0.9;
-    transform: translateY(-1px);
+.option-content {
+  flex: 1;
+  text-align: left;
+
+  h4 {
+    margin: 0 0 var(--space-1);
+    font-size: var(--text-base);
+    color: var(--text-primary);
+    font-weight: var(--font-semibold);
   }
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  p {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
   }
+}
+
+.create-option :deep(svg:last-child) {
+  color: var(--text-muted);
 }
 </style>

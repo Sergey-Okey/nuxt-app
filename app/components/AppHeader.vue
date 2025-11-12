@@ -23,56 +23,14 @@
         <div class="notifications-wrapper">
           <button
             class="icon-button"
-            @click="toggleNotifications"
+            @click="openNotifications"
             title="Уведомления"
           >
             <Icon name="lucide:bell" size="20" />
-            <span
-              v-if="unreadNotificationsCount > 0"
-              class="notification-badge"
-            >
-              {{ unreadNotificationsCount }}
+            <span v-if="unreadCount > 0" class="notification-badge">
+              {{ unreadCount }}
             </span>
           </button>
-
-          <!-- Notifications Dropdown -->
-          <div v-if="showNotifications" class="notifications-dropdown">
-            <div class="dropdown-header">
-              <h3>Уведомления</h3>
-              <button class="clear-button" @click="markAllAsRead">
-                Прочитать все
-              </button>
-            </div>
-
-            <div class="notifications-list">
-              <div
-                v-for="notification in notifications"
-                :key="notification.id"
-                class="notification-item"
-                :class="{ unread: !notification.read }"
-                @click="markAsRead(notification.id)"
-              >
-                <div class="notification-icon">
-                  <Icon :name="notification.icon" size="16" />
-                </div>
-                <div class="notification-content">
-                  <div class="notification-title">{{ notification.title }}</div>
-                  <div class="notification-message">
-                    {{ notification.message }}
-                  </div>
-                </div>
-                <div class="notification-time">{{ notification.time }}</div>
-              </div>
-
-              <div
-                v-if="notifications.length === 0"
-                class="empty-notifications"
-              >
-                <Icon name="lucide:bell-off" size="24" />
-                <p>Нет уведомлений</p>
-              </div>
-            </div>
-          </div>
         </div>
 
         <!-- Quick Create -->
@@ -109,12 +67,19 @@
       </div>
     </div>
   </header>
+
+  <!-- Notifications Modal -->
+  <AppNotificationsModal />
 </template>
 
 <script setup lang="ts">
-// Theme management
+// Импортируем store
+const notificationsStore = useNotificationsStore()
+
+// Theme management - исправляем инициализацию
 const theme = ref<'dark' | 'light'>('dark')
 
+// Гарантируем что themeIcon всегда будет строкой
 const themeIcon = computed(() => {
   return theme.value === 'dark' ? 'lucide:sun' : 'lucide:moon'
 })
@@ -129,56 +94,10 @@ const toggleTheme = () => {
 }
 
 // Notifications
-const showNotifications = ref(false)
-const unreadNotificationsCount = ref(3)
+const unreadCount = computed(() => notificationsStore.unreadCount)
 
-const notifications = ref([
-  {
-    id: '1',
-    title: 'Добро пожаловать!',
-    message: 'Начните использовать TaskFlow',
-    icon: 'lucide:info',
-    read: false,
-    time: '2м назад',
-  },
-  {
-    id: '2',
-    title: 'Время для фокуса',
-    message: 'Вы давно не использовали таймер',
-    icon: 'lucide:clock',
-    read: false,
-    time: '30м назад',
-  },
-  {
-    id: '3',
-    title: 'Задача выполнена',
-    message: 'Прототип интерфейса завершен',
-    icon: 'lucide:check-circle',
-    read: true,
-    time: '2ч назад',
-  },
-])
-
-const toggleNotifications = () => {
-  showNotifications.value = !showNotifications.value
-  showQuickCreate.value = false // Close other dropdown
-}
-
-const markAsRead = (id: string) => {
-  const notification = notifications.value.find((n) => n.id === id)
-  if (notification && !notification.read) {
-    notification.read = true
-    unreadNotificationsCount.value--
-  }
-}
-
-const markAllAsRead = () => {
-  notifications.value.forEach((notification) => {
-    if (!notification.read) {
-      notification.read = true
-    }
-  })
-  unreadNotificationsCount.value = 0
+const openNotifications = () => {
+  notificationsStore.openModal()
 }
 
 // Quick Create
@@ -186,13 +105,11 @@ const showQuickCreate = ref(false)
 
 const toggleQuickCreate = () => {
   showQuickCreate.value = !showQuickCreate.value
-  showNotifications.value = false // Close other dropdown
 }
 
 const createQuickTask = () => {
   console.log('Create quick task')
   showQuickCreate.value = false
-  // Здесь можно открыть модалку создания задачи
 }
 
 const startFocusSession = () => {
@@ -223,11 +140,9 @@ const navigateTo = (route: string) => {
 
 // Close dropdowns when clicking outside
 const closeDropdowns = () => {
-  showNotifications.value = false
   showQuickCreate.value = false
 }
 
-// Listen for clicks outside
 onMounted(() => {
   document.addEventListener('click', (e) => {
     const target = e.target as HTMLElement
@@ -327,139 +242,6 @@ onUnmounted(() => {
   @include flex-center;
 }
 
-.notifications-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: var(--space-2);
-  background: var(--card-bg);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-card);
-  width: 320px;
-  max-height: 400px;
-  box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(20px);
-  z-index: var(--z-dropdown);
-  animation: slideDown 0.2s ease-out;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.dropdown-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-4);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-
-  h3 {
-    margin: 0;
-    font-size: var(--text-lg);
-    color: var(--text-primary);
-  }
-}
-
-.clear-button {
-  @include button-reset;
-  font-size: var(--text-sm);
-  color: var(--accent-primary);
-  font-weight: var(--font-medium);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  transition: all var(--duration-base);
-
-  &:hover {
-    background: rgba(93, 95, 239, 0.1);
-  }
-}
-
-.notifications-list {
-  max-height: 300px;
-  overflow-y: auto;
-  padding: var(--space-2);
-}
-
-.notification-item {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  border-radius: var(--radius-base);
-  cursor: pointer;
-  transition: all var(--duration-base);
-  border-left: 3px solid transparent;
-
-  &:hover {
-    background: var(--surface-bg);
-  }
-
-  &.unread {
-    border-left-color: var(--accent-primary);
-    background: rgba(93, 95, 239, 0.05);
-  }
-}
-
-.notification-icon {
-  @include flex-center;
-  margin-top: 2px;
-  flex-shrink: 0;
-
-  :deep(svg) {
-    color: var(--text-secondary);
-  }
-}
-
-.notification-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.notification-title {
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
-  margin-bottom: var(--space-1);
-  font-size: var(--text-sm);
-}
-
-.notification-message {
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  line-height: var(--leading-tight);
-}
-
-.notification-time {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.empty-notifications {
-  @include flex-center;
-  flex-direction: column;
-  padding: var(--space-8) var(--space-4);
-  color: var(--text-secondary);
-  text-align: center;
-
-  :deep(svg) {
-    margin-bottom: var(--space-3);
-    opacity: 0.5;
-  }
-
-  p {
-    margin: 0;
-    font-size: var(--text-sm);
-  }
-}
-
 // Quick Create
 .quick-create-wrapper {
   position: relative;
@@ -479,6 +261,17 @@ onUnmounted(() => {
   z-index: var(--z-dropdown);
   min-width: 180px;
   animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .dropdown-item {
