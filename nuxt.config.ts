@@ -15,8 +15,8 @@ export default defineNuxtConfig({
 
   googleFonts: {
     families: {
-      Inter: [300, 400, 500, 600, 700],
-      'JetBrains+Mono': [400, 500],
+      Montserrat: [300, 400, 500, 600, 700],
+      'TT Firs Neue': [400, 500],
     },
     display: 'swap',
   },

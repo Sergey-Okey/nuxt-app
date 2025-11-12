@@ -9,7 +9,7 @@ $card-bg: #1f1f1f !default;
 $surface-bg: #2a2a2a !default;
 
 // Акцентные цвета
-$accent-primary: #5df27e !default;
+$accent-primary: #30ac4b !default;
 $accent-secondary: #5d5fef !default;
 $accent-warning: #facc15 !default;
 $accent-error: #f87171 !default;
@@ -35,8 +35,8 @@ $gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,
 // =============================================================================
 
 // Шрифты
-$font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !default;
-$font-family-mono: 'JetBrains Mono', monospace !default;
+$font-family-primary: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif !default;
+$font-family-mono: 'TT Firs Neue', monospace !default;
 
 // Размеры шрифтов
 $text-xs: 0.75rem !default;    // 12px
