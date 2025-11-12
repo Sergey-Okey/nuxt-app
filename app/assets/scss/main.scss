@@ -1,0 +1,11 @@
+// =============================================================================
+// MAIN SCSS ENTRY POINT
+// =============================================================================
+
+// Configuration
+@use 'variables' as *;
+@use 'css-variables' as *;
+@use 'mixins' as *;
+
+// Base styles
+@use 'base' as *;

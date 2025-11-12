@@ -1,0 +1,145 @@
+// =============================================================================
+// COLOR SYSTEM
+// =============================================================================
+
+// Основные цвета
+$primary-bg: #0d0d0d !default;
+$secondary-bg: #1a1a1a !default;
+$card-bg: #1f1f1f !default;
+$surface-bg: #2a2a2a !default;
+
+// Акцентные цвета
+$accent-primary: #5df27e !default;
+$accent-secondary: #5d5fef !default;
+$accent-warning: #facc15 !default;
+$accent-error: #f87171 !default;
+
+// Текст
+$text-primary: #ffffff !default;
+$text-secondary: #a0a0a0 !default;
+$text-muted: #6b7280 !default;
+
+// Статусные цвета
+$success: #5df27e !default;
+$warning: #facc15 !default;
+$error: #f87171 !default;
+$info: #60a5fa !default;
+
+// Градиенты
+$gradient-primary: linear-gradient(135deg, $accent-primary 0%, $accent-secondary 100%) !default;
+$gradient-card: linear-gradient(135deg, $card-bg 0%, #1c1c1c 100%) !default;
+$gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%) !default;
+
+// =============================================================================
+// TYPOGRAPHY
+// =============================================================================
+
+// Шрифты
+$font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !default;
+$font-family-mono: 'JetBrains Mono', monospace !default;
+
+// Размеры шрифтов
+$text-xs: 0.75rem !default;    // 12px
+$text-sm: 0.875rem !default;   // 14px  
+$text-base: 1rem !default;     // 16px
+$text-lg: 1.125rem !default;   // 18px
+$text-xl: 1.25rem !default;    // 20px
+$text-2xl: 1.5rem !default;    // 24px
+$text-3xl: 1.875rem !default;  // 30px
+$text-4xl: 2.25rem !default;   // 36px
+
+// Веса шрифтов
+$font-light: 300 !default;
+$font-normal: 400 !default;
+$font-medium: 500 !default;
+$font-semibold: 600 !default;
+$font-bold: 700 !default;
+
+// Высота строки
+$leading-tight: 1.25 !default;
+$leading-normal: 1.4 !default;
+$leading-relaxed: 1.6 !default;
+
+// =============================================================================
+// SPACING SYSTEM (8px grid)
+// =============================================================================
+
+$space-1: 0.25rem !default;  // 4px
+$space-2: 0.5rem !default;   // 8px
+$space-3: 0.75rem !default;  // 12px
+$space-4: 1rem !default;     // 16px
+$space-5: 1.25rem !default;  // 20px
+$space-6: 1.5rem !default;   // 24px
+$space-8: 2rem !default;     // 32px
+$space-10: 2.5rem !default;  // 40px
+$space-12: 3rem !default;    // 48px
+$space-16: 4rem !default;    // 64px
+
+// =============================================================================
+// BORDER RADIUS
+// =============================================================================
+
+$radius-sm: 0.5rem !default;    // 8px
+$radius-base: 1rem !default;    // 16px
+$radius-lg: 1.5rem !default;    // 24px
+$radius-xl: 2rem !default;      // 32px
+$radius-full: 50% !default;     // круг
+
+// Компонентные радиусы
+$radius-card: $radius-lg !default;
+$radius-button: $radius-base !default;
+$radius-input: $radius-base !default;
+$radius-fab: $radius-full !default;
+
+// =============================================================================
+// SHADOWS & ELEVATION
+// =============================================================================
+
+// Тени
+$shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !default;
+$shadow-base: 0 4px 20px rgba(0, 0, 0, 0.5) !default;
+$shadow-md: 0 8px 30px rgba(0, 0, 0, 0.6) !default;
+$shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.7) !default;
+$shadow-xl: 0 20px 50px rgba(0, 0, 0, 0.8) !default;
+
+// Свечения
+$glow-primary: 0 0 10px rgba(93, 95, 239, 0.3) !default;
+$glow-success: 0 0 10px rgba(93, 242, 126, 0.3) !default;
+$glow-warning: 0 0 10px rgba(250, 204, 21, 0.3) !default;
+$glow-error: 0 0 10px rgba(248, 113, 113, 0.3) !default;
+
+// =============================================================================
+// ANIMATION & TRANSITIONS
+// =============================================================================
+
+// Длительности
+$duration-fast: 0.15s !default;
+$duration-base: 0.3s !default;
+$duration-slow: 0.5s !default;
+
+// Кривые easing
+$ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94) !default;
+$ease-in-out: cubic-bezier(0.42, 0, 0.58, 1) !default;
+$ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55) !default;
+
+// =============================================================================
+// BREAKPOINTS
+// =============================================================================
+
+$breakpoint-sm: 640px !default;
+$breakpoint-md: 768px !default;
+$breakpoint-lg: 1024px !default;
+$breakpoint-xl: 1280px !default;
+$breakpoint-2xl: 1536px !default;
+
+// =============================================================================
+// Z-INDEX
+// =============================================================================
+
+$z-dropdown: 1000 !default;
+$z-sticky: 1020 !default;
+$z-fixed: 1030 !default;
+$z-modal: 1040 !default;
+$z-popover: 1050 !default;
+$z-tooltip: 1060 !default;
+$z-toast: 1070 !default;

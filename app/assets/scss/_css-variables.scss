@@ -1,0 +1,124 @@
+// =============================================================================
+// CSS CUSTOM PROPERTIES
+// =============================================================================
+
+@use 'variables' as *;
+
+:root {
+  // Colors
+  --primary-bg: #{$primary-bg};
+  --secondary-bg: #{$secondary-bg};
+  --card-bg: #{$card-bg};
+  --surface-bg: #{$surface-bg};
+  
+  --accent-primary: #{$accent-primary};
+  --accent-secondary: #{$accent-secondary};
+  --accent-warning: #{$accent-warning};
+  --accent-error: #{$accent-error};
+  
+  --text-primary: #{$text-primary};
+  --text-secondary: #{$text-secondary};
+  --text-muted: #{$text-muted};
+  
+  --success: #{$success};
+  --warning: #{$warning};
+  --error: #{$error};
+  --info: #{$info};
+  
+  --gradient-primary: #{$gradient-primary};
+  --gradient-card: #{$gradient-card};
+  --gradient-glass: #{$gradient-glass};
+
+  // Typography
+  --font-family-primary: #{$font-family-primary};
+  --font-family-mono: #{$font-family-mono};
+  
+  --text-xs: #{$text-xs};
+  --text-sm: #{$text-sm};
+  --text-base: #{$text-base};
+  --text-lg: #{$text-lg};
+  --text-xl: #{$text-xl};
+  --text-2xl: #{$text-2xl};
+  --text-3xl: #{$text-3xl};
+  --text-4xl: #{$text-4xl};
+  
+  --font-light: #{$font-light};
+  --font-normal: #{$font-normal};
+  --font-medium: #{$font-medium};
+  --font-semibold: #{$font-semibold};
+  --font-bold: #{$font-bold};
+  
+  --leading-tight: #{$leading-tight};
+  --leading-normal: #{$leading-normal};
+  --leading-relaxed: #{$leading-relaxed};
+
+  // Spacing
+  --space-1: #{$space-1};
+  --space-2: #{$space-2};
+  --space-3: #{$space-3};
+  --space-4: #{$space-4};
+  --space-5: #{$space-5};
+  --space-6: #{$space-6};
+  --space-8: #{$space-8};
+  --space-10: #{$space-10};
+  --space-12: #{$space-12};
+  --space-16: #{$space-16};
+
+  // Border Radius
+  --radius-sm: #{$radius-sm};
+  --radius-base: #{$radius-base};
+  --radius-lg: #{$radius-lg};
+  --radius-xl: #{$radius-xl};
+  --radius-full: #{$radius-full};
+  
+  --radius-card: #{$radius-card};
+  --radius-button: #{$radius-button};
+  --radius-input: #{$radius-input};
+  --radius-fab: #{$radius-fab};
+
+  // Shadows
+  --shadow-sm: #{$shadow-sm};
+  --shadow-base: #{$shadow-base};
+  --shadow-md: #{$shadow-md};
+  --shadow-lg: #{$shadow-lg};
+  --shadow-xl: #{$shadow-xl};
+  
+  --glow-primary: #{$glow-primary};
+  --glow-success: #{$glow-success};
+  --glow-warning: #{$glow-warning};
+  --glow-error: #{$glow-error};
+
+  // Animation
+  --duration-fast: #{$duration-fast};
+  --duration-base: #{$duration-base};
+  --duration-slow: #{$duration-slow};
+  
+  --ease-out: #{$ease-out};
+  --ease-in-out: #{$ease-in-out};
+  --ease-bounce: #{$ease-bounce};
+
+  // Z-index
+  --z-dropdown: #{$z-dropdown};
+  --z-sticky: #{$z-sticky};
+  --z-fixed: #{$z-fixed};
+  --z-modal: #{$z-modal};
+  --z-popover: #{$z-popover};
+  --z-tooltip: #{$z-tooltip};
+  --z-toast: #{$z-toast};
+}
+
+// Light theme variations
+[data-theme="light"] {
+  --primary-bg: #ffffff;
+  --secondary-bg: #f8fafc;
+  --card-bg: #ffffff;
+  --surface-bg: #f1f5f9;
+  
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  
+  --shadow-base: 0 4px 20px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
