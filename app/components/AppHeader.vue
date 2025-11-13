@@ -68,18 +68,18 @@
     </div>
   </header>
 
-  <!-- Notifications Modal -->
-  <AppNotificationsModal />
+  <!-- Notifications Modal (автоматический импорт) -->
+  <NotificationsModal />
 </template>
 
 <script setup lang="ts">
-// Импортируем store
+// Store (автоматический импорт)
 const notificationsStore = useNotificationsStore()
+const unreadCount = computed(() => notificationsStore.unreadCount)
 
-// Theme management - исправляем инициализацию
+// Theme management
 const theme = ref<'dark' | 'light'>('dark')
 
-// Гарантируем что themeIcon всегда будет строкой
 const themeIcon = computed(() => {
   return theme.value === 'dark' ? 'lucide:sun' : 'lucide:moon'
 })
@@ -94,8 +94,6 @@ const toggleTheme = () => {
 }
 
 // Notifications
-const unreadCount = computed(() => notificationsStore.unreadCount)
-
 const openNotifications = () => {
   notificationsStore.openModal()
 }

@@ -33,13 +33,6 @@ export default defineNuxtConfig({
         },
       },
     },
-
-    // Добавляем настройки сервера для Vite
-    server: {
-      host: '0.0.0.0',
-      port: 3000,
-      strictPort: true,
-    },
   },
 
   // Nuxt-specific dev server config
@@ -47,7 +40,19 @@ export default defineNuxtConfig({
     host: '0.0.0.0',
     port: 3000,
   },
-
+  // Настройка компонентов для автоматических импортов
+  components: [
+    {
+      path: '~/components',
+      pathPrefix: false, // Убираем префиксы папок
+      extensions: ['.vue'],
+    },
+    {
+      path: '~/components/notifications',
+      pathPrefix: false, // Компоненты будут доступны напрямую
+      extensions: ['.vue'],
+    },
+  ],
   app: {
     head: {
       viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
