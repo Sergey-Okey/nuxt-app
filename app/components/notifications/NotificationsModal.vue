@@ -8,42 +8,31 @@
       <div class="modal-content">
         <!-- Header -->
         <div class="modal-header">
-          <div class="header-main">
+          <div class="header-content">
             <h2 class="modal-title">Уведомления</h2>
-            <div v-if="unreadCount > 0" class="unread-badge">
-              {{ unreadCount }} непрочитанных
+            <div class="header-actions">
+              <button
+                v-if="unreadCount > 0"
+                class="action-btn mark-read-btn"
+                @click="markAllAsRead"
+              >
+                <Icon name="lucide:check-circle" size="16" />
+                Прочитать все
+              </button>
+              <button class="action-btn close-btn" @click="closeModal">
+                <Icon name="lucide:x" size="20" />
+              </button>
             </div>
           </div>
 
-          <div class="header-actions">
-            <button
-              v-if="unreadCount > 0"
-              class="action-btn mark-all-read"
-              @click="markAllAsRead"
-            >
-              <Icon name="lucide:check-circle" size="16" />
-              Прочитать все
-            </button>
-
-            <button class="action-btn close-btn" @click="closeModal">
-              <Icon name="lucide:x" size="20" />
-            </button>
+          <div v-if="unreadCount > 0" class="unread-indicator">
+            <span class="unread-count">{{ unreadCount }}</span>
+            <span class="unread-text">непрочитанных</span>
           </div>
         </div>
 
         <!-- Notifications List -->
-        <div class="notifications-section">
-          <div class="section-header">
-            <h3>Последние уведомления</h3>
-            <button
-              v-if="notifications.length > 0"
-              class="clear-all-btn"
-              @click="clearAllNotifications"
-            >
-              Очистить все
-            </button>
-          </div>
-
+        <div class="notifications-container">
           <div class="notifications-list" ref="listRef">
             <NotificationItem
               v-for="notification in sortedNotifications"
@@ -57,34 +46,10 @@
           <!-- Empty State -->
           <div v-if="notifications.length === 0" class="empty-state">
             <div class="empty-icon">
-              <Icon name="lucide:bell-off" size="48" />
+              <Icon name="lucide:bell" size="48" />
             </div>
             <h3>Нет уведомлений</h3>
-            <p>
-              Здесь будут появляться важные уведомления о вашей продуктивности
-            </p>
-          </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="quick-actions">
-          <div class="actions-grid">
-            <button class="action-card" @click="addTestNotification('success')">
-              <Icon name="lucide:check-circle" size="20" />
-              <span>Тест успеха</span>
-            </button>
-            <button class="action-card" @click="addTestNotification('warning')">
-              <Icon name="lucide:alert-triangle" size="20" />
-              <span>Тест предупреждения</span>
-            </button>
-            <button class="action-card" @click="addTestNotification('info')">
-              <Icon name="lucide:info" size="20" />
-              <span>Тест информации</span>
-            </button>
-            <button class="action-card" @click="addTestNotification('error')">
-              <Icon name="lucide:alert-octagon" size="20" />
-              <span>Тест ошибки</span>
-            </button>
+            <p>Здесь появятся важные уведомления о вашей продуктивности</p>
           </div>
         </div>
       </div>
@@ -123,12 +88,6 @@ const removeNotification = (id: string) => {
   notificationsStore.removeNotification(id)
 }
 
-const clearAllNotifications = () => {
-  if (confirm('Вы уверены, что хотите удалить все уведомления?')) {
-    notificationsStore.clearAll()
-  }
-}
-
 const handleNotificationClick = (notification: any) => {
   // Handle different action types
   switch (notification.actionType) {
@@ -154,38 +113,6 @@ const handleNotificationClick = (notification: any) => {
       // Для уведомлений без actionType просто закрываем модалку
       closeModal()
   }
-}
-
-const addTestNotification = (
-  type: 'info' | 'success' | 'warning' | 'error'
-) => {
-  const messages = {
-    info: {
-      title: 'Информационное уведомление',
-      message: 'Это тестовое информационное уведомление',
-    },
-    success: {
-      title: 'Успешное выполнение!',
-      message: 'Задача была успешно завершена',
-    },
-    warning: {
-      title: 'Внимание требуется',
-      message: 'Пожалуйста, проверьте этот элемент',
-    },
-    error: {
-      title: 'Произошла ошибка',
-      message: 'Что-то пошло не так, проверьте настройки',
-    },
-  }
-
-  notificationsStore.addNotification({
-    ...messages[type],
-    type,
-    category: 'system',
-    read: false,
-    actionUrl: '/',
-    actionType: 'navigate',
-  })
 }
 
 // Close on escape key
@@ -225,8 +152,8 @@ onMounted(() => {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  animation: fadeIn 0.3s ease-out;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease-out;
 }
 
 @keyframes fadeIn {
@@ -241,12 +168,12 @@ onMounted(() => {
 .modal-container {
   position: relative;
   width: 100%;
-  max-width: 520px;
+  max-width: 600px;
   max-height: 80vh;
-  animation: slideUp 0.3s ease-out;
+  animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes slideUp {
+@keyframes modalSlideIn {
   from {
     opacity: 0;
     transform: translateY(20px) scale(0.95);
@@ -258,9 +185,12 @@ onMounted(() => {
 }
 
 .modal-content {
-  background: var(--card-bg);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-xl);
+  background: rgba(31, 31, 31, 0.9);
+  backdrop-filter: blur(20px);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -268,30 +198,31 @@ onMounted(() => {
 }
 
 .modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: var(--space-5);
+  padding: var(--space-6);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  background: var(--surface-bg);
+  background: rgba(255, 255, 255, 0.02);
 }
 
-.header-main {
-  .modal-title {
-    font-size: var(--text-xl);
-    font-weight: var(--font-bold);
-    color: var(--text-primary);
-    margin-bottom: var(--space-1);
-  }
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
 
-  .unread-badge {
-    font-size: var(--text-sm);
-    color: var(--accent-primary);
-    background: rgba(93, 95, 239, 0.1);
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-sm);
-    font-weight: var(--font-medium);
-  }
+.modal-title {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  margin: 0;
+  background: linear-gradient(
+    135deg,
+    var(--text-primary) 0%,
+    var(--accent-primary) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .header-actions {
@@ -303,27 +234,28 @@ onMounted(() => {
 .action-btn {
   @include button-reset;
   @include flex-center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-button);
-  font-size: var(--text-sm);
   font-weight: var(--font-medium);
   transition: all var(--duration-base);
 
-  &.mark-all-read {
-    background: var(--surface-bg);
-    color: var(--text-secondary);
+  &.mark-read-btn {
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: rgba(93, 95, 239, 0.1);
+    color: var(--accent-primary);
+    font-size: var(--text-sm);
 
     &:hover {
       background: var(--accent-primary);
       color: white;
+      transform: translateY(-1px);
     }
   }
 
   &.close-btn {
     width: 36px;
     height: 36px;
-    background: var(--surface-bg);
+    background: rgba(255, 255, 255, 0.05);
     color: var(--text-secondary);
 
     &:hover {
@@ -333,45 +265,39 @@ onMounted(() => {
   }
 }
 
-.notifications-section {
+.unread-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: rgba(93, 95, 239, 0.1);
+  border-radius: var(--radius-lg);
+  width: fit-content;
+}
+
+.unread-count {
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  color: var(--accent-primary);
+}
+
+.unread-text {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-weight: var(--font-medium);
+}
+
+.notifications-container {
   flex: 1;
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-4) var(--space-5) var(--space-3);
-
-  h3 {
-    font-size: var(--text-lg);
-    font-weight: var(--font-semibold);
-    color: var(--text-primary);
-    margin: 0;
-  }
-}
-
-.clear-all-btn {
-  @include button-reset;
-  font-size: var(--text-sm);
-  color: var(--error);
-  font-weight: var(--font-medium);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  transition: all var(--duration-base);
-
-  &:hover {
-    background: rgba(248, 113, 113, 0.1);
-  }
-}
-
 .notifications-list {
   flex: 1;
   overflow-y: auto;
-  padding: 0 var(--space-5) var(--space-4);
+  padding: var(--space-4);
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -382,11 +308,11 @@ onMounted(() => {
   }
 
   &::-webkit-scrollbar-thumb {
-    background: var(--surface-bg);
+    background: rgba(255, 255, 255, 0.1);
     border-radius: var(--radius-full);
 
     &:hover {
-      background: var(--text-muted);
+      background: rgba(255, 255, 255, 0.2);
     }
   }
 }
@@ -395,12 +321,12 @@ onMounted(() => {
   @include flex-center;
   flex-direction: column;
   text-align: center;
-  padding: var(--space-12) var(--space-6);
+  padding: var(--space-16) var(--space-6);
   color: var(--text-secondary);
 
   .empty-icon {
     margin-bottom: var(--space-4);
-    opacity: 0.5;
+    opacity: 0.3;
   }
 
   h3 {
@@ -415,38 +341,36 @@ onMounted(() => {
     line-height: var(--leading-relaxed);
     margin: 0;
     max-width: 280px;
+    opacity: 0.7;
   }
 }
 
-.quick-actions {
-  padding: var(--space-4) var(--space-5);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  background: var(--surface-bg);
-}
+// Light theme support
+[data-theme='light'] {
+  .modal-content {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
 
-.actions-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-2);
-}
+  .modal-header {
+    background: rgba(0, 0, 0, 0.02);
+  }
 
-.action-card {
-  @include button-reset;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  background: var(--card-bg);
-  border-radius: var(--radius-card);
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-base);
+  .action-btn.close-btn {
+    background: rgba(0, 0, 0, 0.05);
+  }
 
-  &:hover {
-    background: var(--accent-primary);
-    color: white;
-    transform: translateY(-1px);
+  .notification-item {
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+
+    &.unread {
+      background: rgba(93, 95, 239, 0.05);
+    }
+
+    &.read {
+      background: rgba(0, 0, 0, 0.02);
+    }
   }
 }
 
@@ -460,23 +384,29 @@ onMounted(() => {
     max-width: none;
     max-height: none;
     height: 100vh;
-    border-radius: 0;
   }
 
   .modal-content {
     border-radius: 0;
   }
 
-  .modal-header,
-  .section-header,
-  .notifications-list,
-  .quick-actions {
-    padding-left: var(--space-4);
-    padding-right: var(--space-4);
+  .modal-header {
+    padding: var(--space-5);
   }
 
-  .actions-grid {
-    grid-template-columns: 1fr;
+  .notifications-list {
+    padding: var(--space-3);
+  }
+
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 </style>

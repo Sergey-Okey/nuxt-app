@@ -22,21 +22,19 @@ export const useNotificationsStore = defineStore('notifications', {
     notifications: [
       {
         id: '1',
-        title: 'Добро пожаловать в TaskFlow! 🎉',
-        message:
-          'Начните управлять своими задачами эффективно. Создайте первую задачу или настройте профиль.',
+        title: 'Добро пожаловать',
+        message: 'Начните использовать TaskFlow для управления задачами',
         type: 'info',
         category: 'system',
         read: false,
         timestamp: new Date(),
-        actionUrl: '/onboarding',
+        actionUrl: '/',
         actionType: 'navigate',
       },
       {
         id: '2',
-        title: 'Время для фокус-сессии 🎯',
-        message:
-          'Вы давно не использовали таймер Pomodoro. Начните сессию для повышения продуктивности.',
+        title: 'Время для фокуса',
+        message: 'Попробуйте таймер Pomodoro для повышения продуктивности',
         type: 'warning',
         category: 'productivity',
         read: false,
@@ -46,9 +44,8 @@ export const useNotificationsStore = defineStore('notifications', {
       },
       {
         id: '3',
-        title: 'Задача выполнена! ✅',
-        message:
-          'Задача "Прототип интерфейса" успешно завершена. Перейдите к следующим задачам.',
+        title: 'Задача выполнена',
+        message: 'Прототип интерфейса успешно завершен',
         type: 'success',
         category: 'tasks',
         read: true,
@@ -57,27 +54,37 @@ export const useNotificationsStore = defineStore('notifications', {
         actionType: 'navigate',
       },
       {
-        id: '4',
-        title: 'Новый рекорд продуктивности 📈',
-        message:
-          'Вы достигли 85% продуктивности на этой неделе! Посмотрите подробную статистику.',
+        id: '3',
+        title: 'Задача выполнена',
+        message: 'Прототип интерфейса успешно завершен',
         type: 'success',
-        category: 'analytics',
+        category: 'tasks',
         read: false,
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-        actionUrl: '/analytics',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
+        actionUrl: '/tasks',
         actionType: 'navigate',
       },
       {
-        id: '5',
-        title: 'Напоминание о перерыве ☕',
-        message:
-          'Вы работаете уже 2 часа без перерыва. Рекомендуем сделать 5-минутный перерыв.',
-        type: 'info',
-        category: 'health',
+        id: '3',
+        title: 'Задача выполнена',
+        message: 'Прототип интерфейса успешно завершен',
+        type: 'success',
+        category: 'tasks',
         read: false,
-        timestamp: new Date(Date.now() - 1000 * 60 * 10),
-        actionType: 'dismiss', // Просто закрывается без перехода
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
+        actionUrl: '/tasks',
+        actionType: 'navigate',
+      },
+      {
+        id: '3',
+        title: 'Задача выполнена',
+        message: 'Прототип интерфейса успешно завершен',
+        type: 'success',
+        category: 'tasks',
+        read: false,
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
+        actionUrl: '/tasks',
+        actionType: 'navigate',
       },
     ],
     isModalOpen: false,
@@ -125,15 +132,11 @@ export const useNotificationsStore = defineStore('notifications', {
       this.notifications = this.notifications.filter((n) => n.id !== id)
     },
 
-    clearAll() {
-      this.notifications = []
-    },
-
-    // Специальные методы для разных типов уведомлений
+    // Useful methods for the app
     addTaskCompletedNotification(taskTitle: string) {
       this.addNotification({
-        title: 'Задача выполнена! ✅',
-        message: `Задача "${taskTitle}" успешно завершена.`,
+        title: 'Задача выполнена',
+        message: `Задача "${taskTitle}" успешно завершена`,
         type: 'success',
         category: 'tasks',
         read: false,
@@ -142,9 +145,9 @@ export const useNotificationsStore = defineStore('notifications', {
       })
     },
 
-    addFocusTimeNotification(minutes: number) {
+    addFocusSessionCompleted(minutes: number) {
       this.addNotification({
-        title: 'Фокус-сессия завершена 🎯',
+        title: 'Фокус-сессия завершена',
         message: `Вы сфокусировались ${minutes} минут. Отличная работа!`,
         type: 'success',
         category: 'productivity',
@@ -154,60 +157,15 @@ export const useNotificationsStore = defineStore('notifications', {
       })
     },
 
-    addBreakReminderNotification() {
+    addDailySummary(completedTasks: number, focusTime: string) {
       this.addNotification({
-        title: 'Время для перерыва ☕',
-        message:
-          'Вы работаете долгое время. Сделайте перерыв для поддержания продуктивности.',
-        type: 'warning',
-        category: 'health',
-        read: false,
-        actionType: 'dismiss',
-      })
-    },
-
-    addDailySummaryNotification(completedTasks: number, focusTime: string) {
-      this.addNotification({
-        title: 'Итоги дня 📊',
-        message: `Сегодня вы выполнили ${completedTasks} задач и сфокусировались ${focusTime}.`,
+        title: 'Итоги дня',
+        message: `Выполнено задач: ${completedTasks}, Фокус-время: ${focusTime}`,
         type: 'info',
         category: 'analytics',
         read: false,
         actionUrl: '/analytics',
         actionType: 'navigate',
-      })
-    },
-
-    // For demo purposes - add sample notifications
-    addSampleNotification() {
-      const types: Notification['type'][] = [
-        'info',
-        'success',
-        'warning',
-        'error',
-      ]
-      const categories = [
-        'system',
-        'tasks',
-        'productivity',
-        'analytics',
-        'health',
-      ]
-      const actions: Notification['actionType'][] = ['navigate', 'dismiss']
-
-      const randomType = types[Math.floor(Math.random() * types.length)]
-      const randomCategory =
-        categories[Math.floor(Math.random() * categories.length)]
-      const randomAction = actions[Math.floor(Math.random() * actions.length)]
-
-      this.addNotification({
-        title: 'Тестовое уведомление',
-        message: 'Это пример уведомления для демонстрации функциональности',
-        type: randomType,
-        category: randomCategory,
-        read: false,
-        actionUrl: randomAction === 'navigate' ? '/' : undefined,
-        actionType: randomAction,
       })
     },
   },

@@ -52,6 +52,11 @@ export default defineNuxtConfig({
       pathPrefix: false, // Компоненты будут доступны напрямую
       extensions: ['.vue'],
     },
+    {
+      path: '~/components/ui',
+      pathPrefix: false, // Компоненты будут доступны напрямую
+      extensions: ['.vue'],
+    },
   ],
   app: {
     head: {

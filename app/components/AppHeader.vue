@@ -4,7 +4,7 @@
       <!-- Logo -->
       <div class="header-logo">
         <button class="logo-button" @click="goToHome">
-          <Icon name="lucide:rocket" size="24" />
+          <NuxtImg src="/images/logo.png" />
         </button>
       </div>
 
@@ -32,53 +32,32 @@
             </span>
           </button>
         </div>
-
-        <!-- Quick Create -->
-        <div class="quick-create-wrapper">
-          <button
-            class="icon-button"
-            @click="toggleQuickCreate"
-            title="Быстрое создание"
-          >
-            <Icon name="lucide:plus" size="20" />
-          </button>
-
-          <!-- Quick Create Dropdown -->
-          <div v-if="showQuickCreate" class="quick-create-dropdown">
-            <button class="dropdown-item" @click="createQuickTask">
-              <Icon name="lucide:check-square" size="16" />
-              <span>Быстрая задача</span>
-            </button>
-            <button class="dropdown-item" @click="startFocusSession">
-              <Icon name="lucide:clock" size="16" />
-              <span>Фокус-сессия</span>
-            </button>
-            <button class="dropdown-item" @click="addQuickNote">
-              <Icon name="lucide:sticky-note" size="16" />
-              <span>Быстрая заметка</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- User Profile -->
-        <button class="user-avatar" @click="goToProfile" title="Профиль">
-          <span>С</span>
-        </button>
       </div>
     </div>
   </header>
 
-  <!-- Notifications Modal (автоматический импорт) -->
+  <!-- Notifications Modal -->
   <NotificationsModal />
 </template>
 
 <script setup lang="ts">
-// Store (автоматический импорт)
+// Components
+import NotificationsModal from '~/components/Notifications/NotificationsModal.vue'
+
+// Store
 const notificationsStore = useNotificationsStore()
 const unreadCount = computed(() => notificationsStore.unreadCount)
 
-// Theme management
-const theme = ref<'dark' | 'light'>('dark')
+// Theme management - integrated with global theme
+const theme = ref<'dark' | 'light'>(getCurrentTheme())
+
+function getCurrentTheme(): 'dark' | 'light' {
+  if (typeof document === 'undefined') return 'dark'
+  return (
+    (document.documentElement.getAttribute('data-theme') as 'dark' | 'light') ||
+    'dark'
+  )
+}
 
 const themeIcon = computed(() => {
   return theme.value === 'dark' ? 'lucide:sun' : 'lucide:moon'
@@ -91,34 +70,34 @@ const themeButtonTitle = computed(() => {
 const toggleTheme = () => {
   theme.value = theme.value === 'dark' ? 'light' : 'dark'
   document.documentElement.setAttribute('data-theme', theme.value)
+  // Сохраняем выбор темы в localStorage
+  localStorage.setItem('taskflow-theme', theme.value)
 }
+
+// Initialize theme from localStorage or system preference
+onMounted(() => {
+  const savedTheme = localStorage.getItem('taskflow-theme') as
+    | 'dark'
+    | 'light'
+    | null
+  const systemPrefersDark = window.matchMedia(
+    '(prefers-color-scheme: dark)'
+  ).matches
+
+  if (savedTheme) {
+    theme.value = savedTheme
+  } else if (systemPrefersDark) {
+    theme.value = 'dark'
+  } else {
+    theme.value = 'light'
+  }
+
+  document.documentElement.setAttribute('data-theme', theme.value)
+})
 
 // Notifications
 const openNotifications = () => {
   notificationsStore.openModal()
-}
-
-// Quick Create
-const showQuickCreate = ref(false)
-
-const toggleQuickCreate = () => {
-  showQuickCreate.value = !showQuickCreate.value
-}
-
-const createQuickTask = () => {
-  console.log('Create quick task')
-  showQuickCreate.value = false
-}
-
-const startFocusSession = () => {
-  console.log('Start focus session')
-  showQuickCreate.value = false
-  navigateTo('/timer')
-}
-
-const addQuickNote = () => {
-  console.log('Add quick note')
-  showQuickCreate.value = false
 }
 
 // Navigation
@@ -131,38 +110,21 @@ const goToHome = () => {
 const goToProfile = () => {
   router.push('/profile')
 }
-
-const navigateTo = (route: string) => {
-  router.push(route)
-}
-
-// Close dropdowns when clicking outside
-const closeDropdowns = () => {
-  showQuickCreate.value = false
-}
-
-onMounted(() => {
-  document.addEventListener('click', (e) => {
-    const target = e.target as HTMLElement
-    if (!target.closest('.header-actions')) {
-      closeDropdowns()
-    }
-  })
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', closeDropdowns)
-})
 </script>
 
 <style scoped lang="scss">
 .app-header {
-  background: var(--card-bg);
+  background: rgba(31, 31, 31, 0.8);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
+}
+
+[data-theme='light'] .app-header {
+  background: rgba(255, 255, 255, 0.8);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .header-content {
@@ -180,14 +142,9 @@ onUnmounted(() => {
     @include flex-center;
     width: 44px;
     height: 44px;
-    border-radius: var(--radius-button);
-    background: var(--gradient-primary);
-    color: white;
-    transition: all var(--duration-base);
 
     &:hover {
       transform: scale(1.05);
-      box-shadow: var(--glow-primary);
     }
   }
 }
@@ -195,8 +152,7 @@ onUnmounted(() => {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  position: relative;
+  gap: var(--space-3);
 }
 
 .icon-button {
@@ -206,19 +162,20 @@ onUnmounted(() => {
   width: 44px;
   height: 44px;
   border-radius: var(--radius-button);
-  background: var(--surface-bg);
   color: var(--text-secondary);
   transition: all var(--duration-base);
 
   &:hover {
-    background: var(--accent-primary);
-    color: white;
     transform: translateY(-1px);
   }
 
   &:active {
     transform: translateY(0);
   }
+}
+
+[data-theme='light'] .icon-button {
+  background: rgba(0, 0, 0, 0.05);
 }
 
 // Notifications
@@ -238,84 +195,5 @@ onUnmounted(() => {
   height: 18px;
   border-radius: var(--radius-full);
   @include flex-center;
-}
-
-// Quick Create
-.quick-create-wrapper {
-  position: relative;
-}
-
-.quick-create-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: var(--space-2);
-  background: var(--card-bg);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-card);
-  padding: var(--space-2);
-  box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(20px);
-  z-index: var(--z-dropdown);
-  min-width: 180px;
-  animation: slideDown 0.2s ease-out;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.dropdown-item {
-  @include button-reset;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  width: 100%;
-  padding: var(--space-3);
-  border-radius: var(--radius-base);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  transition: all var(--duration-base);
-
-  &:hover {
-    background: var(--surface-bg);
-  }
-
-  :deep(svg) {
-    color: var(--text-secondary);
-  }
-}
-
-// User Profile
-.user-avatar {
-  @include button-reset;
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-full);
-  background: var(--gradient-primary);
-  @include flex-center;
-  font-weight: var(--font-bold);
-  color: white;
-  box-shadow: var(--glow-primary);
-  transition: all var(--duration-base);
-
-  &:hover {
-    transform: scale(1.05);
-    box-shadow: var(--glow-primary), 0 0 20px rgba(93, 95, 239, 0.4);
-  }
-}
-
-// Responsive
-@include breakpoint(sm) {
-  .header-actions {
-    gap: var(--space-3);
-  }
 }
 </style>

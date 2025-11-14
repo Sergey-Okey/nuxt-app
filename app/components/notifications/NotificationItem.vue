@@ -1,19 +1,15 @@
 <template>
   <div
     ref="containerRef"
-    class="notification-container"
-    :class="{ 'is-swiping': isSwiping }"
+    class="notification-item"
+    :class="[
+      notification.type,
+      { unread: !notification.read, read: notification.read },
+    ]"
   >
-    <!-- Swipe Action Background -->
-    <div
-      class="swipe-action-background"
-      :class="{ 'swipe-active': swipeProgress > 0 }"
-      :style="{ '--swipe-progress': swipeProgress }"
-    >
-      <div class="delete-action">
-        <Icon name="lucide:trash-2" size="24" />
-        <span>Удалить</span>
-      </div>
+    <!-- Swipe Delete Area -->
+    <div class="swipe-delete-area" :class="{ active: swipeProgress > 0 }">
+      <Icon name="lucide:trash-2" size="20" />
     </div>
 
     <!-- Notification Content -->
@@ -21,44 +17,23 @@
       ref="contentRef"
       class="notification-content"
       :style="contentStyle"
-      @click="handleNotificationClick"
+      @click="handleClick"
     >
-      <div class="notification-main">
+      <div class="notification-icon" :class="notification.type">
+        <Icon :name="notificationIcon" size="18" />
+      </div>
+
+      <div class="notification-body">
         <div class="notification-header">
-          <div class="notification-icon" :class="notification.type">
-            <Icon :name="notificationIcon" size="18" />
-          </div>
-          <div class="notification-info">
-            <h4 class="notification-title">{{ notification.title }}</h4>
-            <p class="notification-message">{{ notification.message }}</p>
-          </div>
-          <button
-            v-if="!isSwiping"
-            class="quick-delete-btn"
-            @click.stop="handleQuickDelete"
-          >
-            <Icon name="lucide:x" size="16" />
-          </button>
-        </div>
-
-        <div class="notification-footer">
+          <h4 class="notification-title">{{ notification.title }}</h4>
           <span class="notification-time">{{ formattedTime }}</span>
-          <span class="notification-category">{{ categoryLabel }}</span>
-          <span v-if="hasAction" class="notification-action-hint">
-            <Icon name="lucide:arrow-up-right" size="12" />
-            Нажмите для перехода
-          </span>
         </div>
+        <p class="notification-message">{{ notification.message }}</p>
       </div>
 
-      <!-- Swipe Indicator -->
-      <div
-        v-if="isSwiping"
-        class="swipe-indicator"
-        :style="{ opacity: swipeProgress }"
-      >
-        <Icon name="lucide:chevron-left" size="16" />
-      </div>
+      <button class="delete-btn" @click.stop="handleDelete">
+        <Icon name="lucide:x" size="16" />
+      </button>
     </div>
   </div>
 </template>
@@ -92,8 +67,8 @@ const emit = defineEmits<{
 const containerRef = ref<HTMLElement>()
 const contentRef = ref<HTMLElement>()
 const swipeOffset = ref(0)
-const isSwiping = ref(false)
 const swipeProgress = ref(0)
+const isSwiping = ref(false)
 
 // Computed
 const notificationIcon = computed(() => {
@@ -104,17 +79,6 @@ const notificationIcon = computed(() => {
     error: 'lucide:alert-octagon',
   }
   return icons[props.notification.type] || 'lucide:bell'
-})
-
-const categoryLabel = computed(() => {
-  const labels: Record<string, string> = {
-    system: 'Система',
-    tasks: 'Задачи',
-    productivity: 'Продуктивность',
-    analytics: 'Аналитика',
-    health: 'Здоровье',
-  }
-  return labels[props.notification.category] || props.notification.category
 })
 
 const formattedTime = computed(() => {
@@ -131,32 +95,27 @@ const formattedTime = computed(() => {
   return 'Только что'
 })
 
-const hasAction = computed(
-  () =>
-    props.notification.actionType === 'navigate' && props.notification.actionUrl
-)
-
 const contentStyle = computed(() => ({
   transform: `translateX(${swipeOffset.value}px)`,
-  cursor: isSwiping.value ? 'grabbing' : 'pointer',
+  transition: isSwiping.value
+    ? 'none'
+    : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
 }))
 
 // Gesture Handling
 useGesture(
   {
-    onDrag: ({ movement: [mx], first, last, intentional, event }) => {
-      event.preventDefault()
-
+    onDrag: ({ movement: [mx], first, last, intentional }) => {
       if (!intentional) return
 
       // Only allow left swiping
       if (mx < 0) {
         isSwiping.value = true
-        swipeOffset.value = Math.max(mx, -120)
-        swipeProgress.value = Math.min(Math.abs(mx) / 120, 1)
+        swipeOffset.value = Math.max(mx, -80)
+        swipeProgress.value = Math.min(Math.abs(mx) / 80, 1)
 
         if (last) {
-          if (mx < -80) {
+          if (mx < -60) {
             // Swiped enough - trigger delete
             triggerDelete()
           } else {
@@ -168,9 +127,7 @@ useGesture(
     },
 
     onDragEnd: () => {
-      if (isSwiping.value && Math.abs(swipeOffset.value) < 80) {
-        resetSwipe()
-      }
+      isSwiping.value = false
     },
   },
   {
@@ -180,14 +137,12 @@ useGesture(
       filterTaps: true,
       pointer: { touch: true },
     },
-    eventOptions: { passive: false },
   }
 )
 
 // Methods
 const resetSwipe = () => {
   swipeOffset.value = 0
-  isSwiping.value = false
   swipeProgress.value = 0
 }
 
@@ -195,8 +150,8 @@ const triggerDelete = () => {
   emit('remove', props.notification.id)
 }
 
-const handleNotificationClick = () => {
-  if (isSwiping.value || Math.abs(swipeOffset.value) > 10) {
+const handleClick = () => {
+  if (Math.abs(swipeOffset.value) > 10) {
     resetSwipe()
     return
   }
@@ -209,154 +164,142 @@ const handleNotificationClick = () => {
   emit('click', props.notification)
 }
 
-const handleQuickDelete = (event: Event) => {
+const handleDelete = (event: Event) => {
   event.stopPropagation()
   triggerDelete()
 }
 </script>
 
 <style scoped lang="scss">
-.notification-container {
+.notification-item {
   position: relative;
   margin-bottom: var(--space-3);
   border-radius: var(--radius-card);
   overflow: hidden;
-  background: var(--surface-bg);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all var(--duration-base);
 
-  &.is-swiping {
-    z-index: 1;
+  &.read {
+    opacity: 0.7;
+    background: rgba(255, 255, 255, 0.03);
+
+    .notification-title,
+    .notification-message {
+      color: var(--text-secondary);
+    }
   }
 
-  &:hover:not(.is-swiping) {
-    background: var(--card-bg);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
+  &.unread {
+    background: rgba(93, 95, 239, 0.08);
+    border-left: 3px solid var(--accent-primary);
+  }
+
+  // Type-specific borders for unread
+  &.success.unread {
+    border-left-color: var(--success);
+    background: rgba(93, 242, 126, 0.08);
+  }
+
+  &.warning.unread {
+    border-left-color: var(--warning);
+    background: rgba(250, 204, 21, 0.08);
+  }
+
+  &.error.unread {
+    border-left-color: var(--error);
+    background: rgba(248, 113, 113, 0.08);
   }
 }
 
-.swipe-action-background {
+.swipe-delete-area {
   position: absolute;
   top: 0;
-  left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    transparent calc(100% - 120px),
-    var(--error) calc(100% - 120px),
-    var(--error) 100%
-  );
+  width: 80px;
+  background: var(--error);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
   opacity: 0;
   transition: opacity var(--duration-base);
 
-  &.swipe-active {
-    opacity: calc(var(--swipe-progress, 0) * 0.8);
-  }
-}
-
-.delete-action {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 120px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  color: white;
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-
-  :deep(svg) {
-    opacity: 0.9;
+  &.active {
+    opacity: v-bind(swipeProgress);
   }
 }
 
 .notification-content {
-  position: relative;
-  background: inherit;
-  border-radius: inherit;
-  transition: transform var(--duration-base);
-  user-select: none;
-
-  // Border based on notification type
-  border-left: 4px solid transparent;
-
-  .notification-container.info & {
-    border-left-color: var(--accent-primary);
-  }
-
-  .notification-container.success & {
-    border-left-color: var(--success);
-  }
-
-  .notification-container.warning & {
-    border-left-color: var(--warning);
-  }
-
-  .notification-container.error & {
-    border-left-color: var(--error);
-  }
-
-  .notification-container.unread & {
-    background: rgba(93, 95, 239, 0.03);
-  }
-}
-
-.notification-main {
-  padding: var(--space-4);
-}
-
-.notification-header {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  margin-bottom: var(--space-3);
+  padding: var(--space-4);
+  background: inherit;
+  border-radius: inherit;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
 }
 
 .notification-icon {
   @include flex-center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-full);
   flex-shrink: 0;
+  margin-top: 2px;
 
   &.info {
-    background: rgba(93, 95, 239, 0.1);
+    background: rgba(93, 95, 239, 0.15);
     color: var(--accent-primary);
   }
 
   &.success {
-    background: rgba(93, 242, 126, 0.1);
+    background: rgba(93, 242, 126, 0.15);
     color: var(--success);
   }
 
   &.warning {
-    background: rgba(250, 204, 21, 0.1);
+    background: rgba(250, 204, 21, 0.15);
     color: var(--warning);
   }
 
   &.error {
-    background: rgba(248, 113, 113, 0.1);
+    background: rgba(248, 113, 113, 0.15);
     color: var(--error);
   }
 }
 
-.notification-info {
+.notification-body {
   flex: 1;
   min-width: 0;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
 }
 
 .notification-title {
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
-  margin-bottom: var(--space-1);
   line-height: var(--leading-tight);
+  margin: 0;
+  flex: 1;
+}
+
+.notification-time {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .notification-message {
@@ -366,7 +309,7 @@ const handleQuickDelete = (event: Event) => {
   margin: 0;
 }
 
-.quick-delete-btn {
+.delete-btn {
   @include button-reset;
   @include flex-center;
   width: 28px;
@@ -378,7 +321,7 @@ const handleQuickDelete = (event: Event) => {
   flex-shrink: 0;
   opacity: 0;
 
-  .notification-container:hover & {
+  .notification-item:hover & {
     opacity: 1;
   }
 
@@ -388,64 +331,14 @@ const handleQuickDelete = (event: Event) => {
   }
 }
 
-.notification-footer {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-  font-size: var(--text-xs);
-}
-
-.notification-time {
-  color: var(--text-muted);
-}
-
-.notification-category {
-  color: var(--accent-primary);
-  background: rgba(93, 95, 239, 0.1);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  font-weight: var(--font-medium);
-}
-
-.notification-action-hint {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--success);
-  background: rgba(93, 242, 126, 0.1);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  font-weight: var(--font-medium);
-  margin-left: auto;
-}
-
-.swipe-indicator {
-  position: absolute;
-  top: 50%;
-  right: var(--space-3);
-  transform: translateY(-50%);
-  color: var(--text-muted);
-  transition: opacity var(--duration-base);
-}
-
 // Mobile optimizations
 @media (max-width: 640px) {
-  .notification-main {
+  .notification-content {
     padding: var(--space-3);
   }
 
-  .notification-header {
-    gap: var(--space-2);
-    margin-bottom: var(--space-2);
-  }
-
-  .quick-delete-btn {
-    opacity: 1; // Always show on mobile
-  }
-
-  .notification-action-hint {
-    display: none; // Hide on mobile to save space
+  .delete-btn {
+    opacity: 1;
   }
 }
 </style>
