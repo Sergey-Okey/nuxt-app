@@ -1,16 +1,13 @@
 <template>
   <header class="app-header">
     <div class="header-content">
-      <!-- Logo -->
       <div class="header-logo">
         <button class="logo-button" @click="goToHome">
-          <NuxtImg src="/images/logo.png" />
+          <NuxtImg src="/images/logo.png" sizes="35px" />
         </button>
       </div>
 
-      <!-- Right Section: Actions -->
       <div class="header-actions">
-        <!-- Theme Toggle -->
         <button
           class="icon-button"
           @click="toggleTheme"
@@ -19,7 +16,6 @@
           <Icon :name="themeIcon" size="20" />
         </button>
 
-        <!-- Notifications -->
         <div class="notifications-wrapper">
           <button
             class="icon-button"
@@ -32,32 +28,25 @@
             </span>
           </button>
         </div>
+
+        <button class="user-avatar" @click="goToProfile" title="Профиль">
+          <Icon name="lucide:user" size="20" />
+        </button>
       </div>
     </div>
   </header>
 
-  <!-- Notifications Modal -->
   <NotificationsModal />
 </template>
 
 <script setup lang="ts">
-// Components
 import NotificationsModal from '~/components/Notifications/NotificationsModal.vue'
 
-// Store
 const notificationsStore = useNotificationsStore()
 const unreadCount = computed(() => notificationsStore.unreadCount)
 
-// Theme management - integrated with global theme
-const theme = ref<'dark' | 'light'>(getCurrentTheme())
-
-function getCurrentTheme(): 'dark' | 'light' {
-  if (typeof document === 'undefined') return 'dark'
-  return (
-    (document.documentElement.getAttribute('data-theme') as 'dark' | 'light') ||
-    'dark'
-  )
-}
+// Theme management
+const theme = ref<'dark' | 'light'>('dark')
 
 const themeIcon = computed(() => {
   return theme.value === 'dark' ? 'lucide:sun' : 'lucide:moon'
@@ -70,37 +59,12 @@ const themeButtonTitle = computed(() => {
 const toggleTheme = () => {
   theme.value = theme.value === 'dark' ? 'light' : 'dark'
   document.documentElement.setAttribute('data-theme', theme.value)
-  // Сохраняем выбор темы в localStorage
-  localStorage.setItem('taskflow-theme', theme.value)
 }
 
-// Initialize theme from localStorage or system preference
-onMounted(() => {
-  const savedTheme = localStorage.getItem('taskflow-theme') as
-    | 'dark'
-    | 'light'
-    | null
-  const systemPrefersDark = window.matchMedia(
-    '(prefers-color-scheme: dark)'
-  ).matches
-
-  if (savedTheme) {
-    theme.value = savedTheme
-  } else if (systemPrefersDark) {
-    theme.value = 'dark'
-  } else {
-    theme.value = 'light'
-  }
-
-  document.documentElement.setAttribute('data-theme', theme.value)
-})
-
-// Notifications
 const openNotifications = () => {
   notificationsStore.openModal()
 }
 
-// Navigation
 const router = useRouter()
 
 const goToHome = () => {
@@ -114,17 +78,10 @@ const goToProfile = () => {
 
 <style scoped lang="scss">
 .app-header {
-  background: rgba(31, 31, 31, 0.8);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  @include glass(20px, 0.05);
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
-}
-
-[data-theme='light'] .app-header {
-  background: rgba(255, 255, 255, 0.8);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .header-content {
@@ -140,8 +97,6 @@ const goToProfile = () => {
   .logo-button {
     @include button-reset;
     @include flex-center;
-    width: 44px;
-    height: 44px;
 
     &:hover {
       transform: scale(1.05);
@@ -162,23 +117,16 @@ const goToProfile = () => {
   width: 44px;
   height: 44px;
   border-radius: var(--radius-button);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text-secondary);
   transition: all var(--duration-base);
 
   &:hover {
-    transform: translateY(-1px);
-  }
-
-  &:active {
-    transform: translateY(0);
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
   }
 }
 
-[data-theme='light'] .icon-button {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-// Notifications
 .notifications-wrapper {
   position: relative;
 }
@@ -195,5 +143,21 @@ const goToProfile = () => {
   height: 18px;
   border-radius: var(--radius-full);
   @include flex-center;
+}
+
+.user-avatar {
+  @include button-reset;
+  @include flex-center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  transition: all var(--duration-base);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+  }
 }
 </style>

@@ -2,36 +2,28 @@
   <div
     ref="containerRef"
     class="notification-item"
-    :class="[
-      notification.type,
-      { unread: !notification.read, read: notification.read },
-    ]"
+    :class="{ read: notification.read, unread: !notification.read }"
   >
-    <!-- Swipe Delete Area -->
-    <div class="swipe-delete-area" :class="{ active: swipeProgress > 0 }">
-      <Icon name="lucide:trash-2" size="20" />
-    </div>
-
-    <!-- Notification Content -->
     <div
       ref="contentRef"
       class="notification-content"
       :style="contentStyle"
       @click="handleClick"
     >
-      <div class="notification-icon" :class="notification.type">
+      <div class="notification-icon">
         <Icon :name="notificationIcon" size="18" />
       </div>
 
       <div class="notification-body">
-        <div class="notification-header">
-          <h4 class="notification-title">{{ notification.title }}</h4>
+        <div class="notification-title">{{ notification.title }}</div>
+        <div class="notification-message">{{ notification.message }}</div>
+        <div class="notification-meta">
           <span class="notification-time">{{ formattedTime }}</span>
+          <span class="notification-category">{{ categoryLabel }}</span>
         </div>
-        <p class="notification-message">{{ notification.message }}</p>
       </div>
 
-      <button class="delete-btn" @click.stop="handleDelete">
+      <button class="delete-button" @click.stop="handleDelete">
         <Icon name="lucide:x" size="16" />
       </button>
     </div>
@@ -67,8 +59,6 @@ const emit = defineEmits<{
 const containerRef = ref<HTMLElement>()
 const contentRef = ref<HTMLElement>()
 const swipeOffset = ref(0)
-const swipeProgress = ref(0)
-const isSwiping = ref(false)
 
 // Computed
 const notificationIcon = computed(() => {
@@ -78,7 +68,18 @@ const notificationIcon = computed(() => {
     warning: 'lucide:alert-triangle',
     error: 'lucide:alert-octagon',
   }
-  return icons[props.notification.type] || 'lucide:bell'
+  return icons[props.notification.type]
+})
+
+const categoryLabel = computed(() => {
+  const labels: Record<string, string> = {
+    system: 'Система',
+    tasks: 'Задачи',
+    productivity: 'Продуктивность',
+    analytics: 'Аналитика',
+    health: 'Здоровье',
+  }
+  return labels[props.notification.category] || props.notification.category
 })
 
 const formattedTime = computed(() => {
@@ -97,37 +98,25 @@ const formattedTime = computed(() => {
 
 const contentStyle = computed(() => ({
   transform: `translateX(${swipeOffset.value}px)`,
-  transition: isSwiping.value
-    ? 'none'
-    : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  opacity: Math.max(1 - Math.abs(swipeOffset.value) / 200, 0),
 }))
 
 // Gesture Handling
 useGesture(
   {
-    onDrag: ({ movement: [mx], first, last, intentional }) => {
+    onDrag: ({ movement: [mx], last, intentional }) => {
       if (!intentional) return
 
       // Only allow left swiping
       if (mx < 0) {
-        isSwiping.value = true
-        swipeOffset.value = Math.max(mx, -80)
-        swipeProgress.value = Math.min(Math.abs(mx) / 80, 1)
+        swipeOffset.value = Math.max(mx, -120)
 
-        if (last) {
-          if (mx < -60) {
-            // Swiped enough - trigger delete
-            triggerDelete()
-          } else {
-            // Not enough - reset
-            resetSwipe()
-          }
+        if (last && mx < -80) {
+          handleDelete()
+        } else if (last) {
+          swipeOffset.value = 0
         }
       }
-    },
-
-    onDragEnd: () => {
-      isSwiping.value = false
     },
   },
   {
@@ -141,22 +130,12 @@ useGesture(
 )
 
 // Methods
-const resetSwipe = () => {
-  swipeOffset.value = 0
-  swipeProgress.value = 0
-}
-
-const triggerDelete = () => {
-  emit('remove', props.notification.id)
-}
-
 const handleClick = () => {
   if (Math.abs(swipeOffset.value) > 10) {
-    resetSwipe()
+    swipeOffset.value = 0
     return
   }
 
-  // Mark as read if not already
   if (!props.notification.read) {
     useNotificationsStore().markAsRead(props.notification.id)
   }
@@ -164,84 +143,42 @@ const handleClick = () => {
   emit('click', props.notification)
 }
 
-const handleDelete = (event: Event) => {
-  event.stopPropagation()
-  triggerDelete()
+const handleDelete = () => {
+  emit('remove', props.notification.id)
 }
 </script>
 
 <style scoped lang="scss">
 .notification-item {
-  position: relative;
   margin-bottom: var(--space-3);
   border-radius: var(--radius-card);
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all var(--duration-base);
 
   &.read {
-    opacity: 0.7;
-    background: rgba(255, 255, 255, 0.03);
-
-    .notification-title,
-    .notification-message {
-      color: var(--text-secondary);
-    }
+    opacity: 0.6;
   }
 
   &.unread {
-    background: rgba(93, 95, 239, 0.08);
-    border-left: 3px solid var(--accent-primary);
-  }
-
-  // Type-specific borders for unread
-  &.success.unread {
-    border-left-color: var(--success);
-    background: rgba(93, 242, 126, 0.08);
-  }
-
-  &.warning.unread {
-    border-left-color: var(--warning);
-    background: rgba(250, 204, 21, 0.08);
-  }
-
-  &.error.unread {
-    border-left-color: var(--error);
-    background: rgba(248, 113, 113, 0.08);
-  }
-}
-
-.swipe-delete-area {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 80px;
-  background: var(--error);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  opacity: 0;
-  transition: opacity var(--duration-base);
-
-  &.active {
-    opacity: v-bind(swipeProgress);
+    opacity: 1;
   }
 }
 
 .notification-content {
+  @include glass;
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: inherit;
-  border-radius: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-card);
+  transition: all var(--duration-base);
   cursor: pointer;
   user-select: none;
-  position: relative;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
 }
 
 .notification-icon {
@@ -250,27 +187,8 @@ const handleDelete = (event: Event) => {
   height: 32px;
   border-radius: var(--radius-full);
   flex-shrink: 0;
-  margin-top: 2px;
-
-  &.info {
-    background: rgba(93, 95, 239, 0.15);
-    color: var(--accent-primary);
-  }
-
-  &.success {
-    background: rgba(93, 242, 126, 0.15);
-    color: var(--success);
-  }
-
-  &.warning {
-    background: rgba(250, 204, 21, 0.15);
-    color: var(--warning);
-  }
-
-  &.error {
-    background: rgba(248, 113, 113, 0.15);
-    color: var(--error);
-  }
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
 }
 
 .notification-body {
@@ -278,38 +196,41 @@ const handleDelete = (event: Event) => {
   min-width: 0;
 }
 
-.notification-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--space-3);
-  margin-bottom: var(--space-2);
-}
-
 .notification-title {
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
+  margin-bottom: var(--space-1);
   line-height: var(--leading-tight);
-  margin: 0;
-  flex: 1;
-}
-
-.notification-time {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .notification-message {
   font-size: var(--text-sm);
   color: var(--text-secondary);
   line-height: var(--leading-relaxed);
-  margin: 0;
+  margin-bottom: var(--space-2);
 }
 
-.delete-btn {
+.notification-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+}
+
+.notification-time {
+  color: var(--text-muted);
+}
+
+.notification-category {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-medium);
+}
+
+.delete-button {
   @include button-reset;
   @include flex-center;
   width: 28px;
@@ -321,13 +242,13 @@ const handleDelete = (event: Event) => {
   flex-shrink: 0;
   opacity: 0;
 
-  .notification-item:hover & {
+  .notification-content:hover & {
     opacity: 1;
   }
 
   &:hover {
-    background: var(--error);
-    color: white;
+    background: rgba(248, 113, 113, 0.1);
+    color: var(--error);
   }
 }
 
@@ -335,9 +256,10 @@ const handleDelete = (event: Event) => {
 @media (max-width: 640px) {
   .notification-content {
     padding: var(--space-3);
+    @include glass;
   }
 
-  .delete-btn {
+  .delete-button {
     opacity: 1;
   }
 }

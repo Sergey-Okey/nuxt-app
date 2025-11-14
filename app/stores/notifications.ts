@@ -22,8 +22,8 @@ export const useNotificationsStore = defineStore('notifications', {
     notifications: [
       {
         id: '1',
-        title: 'Добро пожаловать',
-        message: 'Начните использовать TaskFlow для управления задачами',
+        title: 'Добро пожаловать в TaskFlow',
+        message: 'Начните управлять своими задачами эффективно',
         type: 'info',
         category: 'system',
         read: false,
@@ -33,8 +33,8 @@ export const useNotificationsStore = defineStore('notifications', {
       },
       {
         id: '2',
-        title: 'Время для фокуса',
-        message: 'Попробуйте таймер Pomodoro для повышения продуктивности',
+        title: 'Время для фокус-сессии',
+        message: 'Вы давно не использовали таймер Pomodoro',
         type: 'warning',
         category: 'productivity',
         read: false,
@@ -45,43 +45,10 @@ export const useNotificationsStore = defineStore('notifications', {
       {
         id: '3',
         title: 'Задача выполнена',
-        message: 'Прототип интерфейса успешно завершен',
+        message: 'Задача "Прототип интерфейса" завершена',
         type: 'success',
         category: 'tasks',
         read: true,
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-        actionUrl: '/tasks',
-        actionType: 'navigate',
-      },
-      {
-        id: '3',
-        title: 'Задача выполнена',
-        message: 'Прототип интерфейса успешно завершен',
-        type: 'success',
-        category: 'tasks',
-        read: false,
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-        actionUrl: '/tasks',
-        actionType: 'navigate',
-      },
-      {
-        id: '3',
-        title: 'Задача выполнена',
-        message: 'Прототип интерфейса успешно завершен',
-        type: 'success',
-        category: 'tasks',
-        read: false,
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-        actionUrl: '/tasks',
-        actionType: 'navigate',
-      },
-      {
-        id: '3',
-        title: 'Задача выполнена',
-        message: 'Прототип интерфейса успешно завершен',
-        type: 'success',
-        category: 'tasks',
-        read: false,
         timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
         actionUrl: '/tasks',
         actionType: 'navigate',
@@ -132,41 +99,8 @@ export const useNotificationsStore = defineStore('notifications', {
       this.notifications = this.notifications.filter((n) => n.id !== id)
     },
 
-    // Useful methods for the app
-    addTaskCompletedNotification(taskTitle: string) {
-      this.addNotification({
-        title: 'Задача выполнена',
-        message: `Задача "${taskTitle}" успешно завершена`,
-        type: 'success',
-        category: 'tasks',
-        read: false,
-        actionUrl: '/tasks',
-        actionType: 'navigate',
-      })
-    },
-
-    addFocusSessionCompleted(minutes: number) {
-      this.addNotification({
-        title: 'Фокус-сессия завершена',
-        message: `Вы сфокусировались ${minutes} минут. Отличная работа!`,
-        type: 'success',
-        category: 'productivity',
-        read: false,
-        actionUrl: '/analytics',
-        actionType: 'navigate',
-      })
-    },
-
-    addDailySummary(completedTasks: number, focusTime: string) {
-      this.addNotification({
-        title: 'Итоги дня',
-        message: `Выполнено задач: ${completedTasks}, Фокус-время: ${focusTime}`,
-        type: 'info',
-        category: 'analytics',
-        read: false,
-        actionUrl: '/analytics',
-        actionType: 'navigate',
-      })
+    clearAll() {
+      this.notifications = []
     },
   },
 })

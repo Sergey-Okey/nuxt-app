@@ -5,7 +5,13 @@
 @use 'variables' as *;
 
 // Glass morphism effect
-@mixin glass($blur: 10px, $opacity: 0.1) {
+@mixin glass($blur: 50px, $opacity: 0.0) {
+  background: rgba(255, 255, 255, $opacity);
+  backdrop-filter: blur($blur);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@mixin glass-light($blur: 50px, $opacity: 0.8) {
   background: rgba(255, 255, 255, $opacity);
   backdrop-filter: blur($blur);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -102,7 +108,6 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
-
 // Neon glow effect
 @mixin neon-glow($color: var(--accent-primary)) {
   box-shadow: 
