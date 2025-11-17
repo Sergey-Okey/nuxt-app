@@ -123,7 +123,9 @@ onMounted(() => {
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(var(--card-bg-rgb), 0.95);
+  border-bottom-right-radius: var(--radius-card);
+  border-bottom-left-radius: var(--radius-card);
   transition: all var(--duration-base);
 }
 
@@ -145,16 +147,6 @@ onMounted(() => {
     transition: all var(--duration-base);
     position: relative;
 
-    &::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: var(--radius-button);
-      background: var(--gradient-primary);
-      opacity: 0;
-      transition: opacity var(--duration-base);
-    }
-
     &:hover {
       transform: scale(1.05);
 
@@ -166,13 +158,6 @@ onMounted(() => {
     &:active {
       transform: scale(0.98);
     }
-  }
-
-  .logo-image {
-    width: 35px;
-    height: 35px;
-    border-radius: var(--radius-base);
-    transition: transform var(--duration-base);
   }
 }
 
@@ -378,10 +363,6 @@ onMounted(() => {
 
 // Light theme adjustments
 [data-theme='light'] {
-  .app-header {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  }
-
   .icon-button {
     background: rgba(var(--surface-bg-rgb), 0.4);
 

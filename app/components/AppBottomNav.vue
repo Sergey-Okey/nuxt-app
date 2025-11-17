@@ -46,12 +46,12 @@ const navigateTo = (route: string) => {
 
 <style scoped lang="scss">
 .bottom-nav {
+  @include glass;
   position: fixed;
   bottom: 0.5rem;
   left: 0.5rem;
   right: 0.5rem;
   background: rgba(var(--card-bg-rgb), 0.95);
-  backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-card);
   display: flex;
