@@ -310,7 +310,6 @@ const goToTimer = () => {
   position: relative;
   padding: var(--space-6);
   margin-bottom: var(--space-6);
-  background: var(--gradient-card);
   border: 1px solid rgba(255, 255, 255, 0.05);
   overflow: hidden;
   transition: all var(--duration-base);
@@ -323,17 +322,6 @@ const goToTimer = () => {
   @include breakpoint(md) {
     padding: var(--space-8) var(--space-6);
   }
-}
-
-.hero-background {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
-  opacity: 0.1;
-  pointer-events: none;
 }
 
 .gradient-orbit {
@@ -576,8 +564,9 @@ const goToTimer = () => {
 
 // Daily Progress
 .daily-progress {
+  @include glass;
   padding: var(--space-4);
-  background: var(--surface-bg);
+
   border-radius: var(--radius-card);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -651,13 +640,13 @@ const goToTimer = () => {
 
 .quick-action {
   @include button-reset;
+  @include glass;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-4);
-  background: var(--surface-bg);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-card);
   color: var(--text-secondary);
