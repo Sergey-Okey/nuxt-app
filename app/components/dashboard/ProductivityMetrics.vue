@@ -9,64 +9,89 @@
     </div>
 
     <div class="metrics-grid">
-      <!-- Focus Time Progress -->
+      <!-- Focus Time -->
       <div class="metric-widget">
         <div class="widget-header">
-          <h3>Фокус-время</h3>
+          <div class="widget-title">
+            <Icon name="lucide:clock" size="20" />
+            <h3>Фокус-время</h3>
+          </div>
           <div class="progress-value" :class="focusProgressClass">
             {{ focusProgressPercentage }}%
           </div>
         </div>
-        <p class="widget-subtitle">{{ focusTimeToday }} / 4ч</p>
 
-        <div class="circular-progress-container">
-          <div class="circular-progress" :style="focusProgressStyle">
-            <div class="progress-content">
-              <Icon name="lucide:clock" size="24" />
+        <div class="metric-content">
+          <div class="time-display">
+            <span class="current-time">{{ focusTimeToday }}</span>
+            <span class="time-separator">/</span>
+            <span class="target-time">4ч</span>
+          </div>
+
+          <div class="progress-bar">
+            <div
+              class="progress-fill"
+              :class="focusProgressClass"
+              :style="{ width: `${focusProgressPercentage}%` }"
+            ></div>
+          </div>
+        </div>
+
+        <div class="metric-footer">
+          <div class="session-count">
+            <Icon name="lucide:play-circle" size="14" />
+            <span>{{ todaySessionsCount }} сессий</span>
+          </div>
+          <div class="progress-label">
+            <span v-if="focusProgressPercentage >= 80">Отлично!</span>
+            <span v-else-if="focusProgressPercentage >= 50">Хорошо!</span>
+            <span v-else-if="focusProgressPercentage > 0">Продолжайте!</span>
+            <span v-else>Начните работу</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Task Completion -->
+      <div class="metric-widget">
+        <div class="widget-header">
+          <div class="widget-title">
+            <Icon name="lucide:check-circle" size="20" />
+            <h3>Выполнено задач</h3>
+          </div>
+          <div class="progress-value" :class="taskProgressClass">
+            {{ taskCompletionPercentage }}%
+          </div>
+        </div>
+
+        <div class="metric-content">
+          <div class="completion-display">
+            <div class="completion-circle" :style="taskCompletionStyle">
+              <div class="completion-content">
+                <span class="completion-text"
+                  >{{ completedTasks }}/{{ totalTasks }}</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="completion-stats">
+            <div class="stat-item">
+              <Icon name="lucide:target" size="14" />
+              <span>Цель: {{ dailyGoal }} задач</span>
             </div>
           </div>
         </div>
 
-        <div class="progress-label">
-          <span v-if="focusProgressPercentage >= 80">Отлично!</span>
-          <span v-else-if="focusProgressPercentage >= 50">Хорошо!</span>
-          <span v-else>Продолжайте!</span>
-        </div>
-      </div>
-
-      <!-- Weekly Progress -->
-      <div class="metric-widget">
-        <div class="widget-header">
-          <h3>Прогресс недели</h3>
-          <div class="average-value" :class="weeklyProgressClass">
-            {{ weeklyProgressAverage }}%
+        <div class="metric-footer">
+          <div class="streak-count">
+            <Icon name="lucide:flame" size="14" />
+            <span>Серия: {{ currentStreak }} дней</span>
           </div>
-        </div>
-
-        <div class="week-chart">
-          <div
-            v-for="day in weeklyProgress"
-            :key="day.day"
-            class="day-bar"
-            :class="{
-              active: day.isToday,
-              completed: day.progress > 0,
-            }"
-            :style="{ height: Math.max(day.progress, 8) + '%' }"
-            :title="`${day.day}: ${day.progress}%`"
-          >
-            <span class="day-label">{{ day.day }}</span>
-          </div>
-        </div>
-
-        <div class="chart-legend">
-          <div class="legend-item">
-            <div class="legend-color today"></div>
-            <span>Сегодня</span>
-          </div>
-          <div class="legend-item">
-            <div class="legend-color completed"></div>
-            <span>Выполнено</span>
+          <div class="progress-label">
+            <span v-if="taskCompletionPercentage >= 100">Идеально!</span>
+            <span v-else-if="taskCompletionPercentage >= 80">Отлично!</span>
+            <span v-else-if="taskCompletionPercentage >= 50">Хорошо!</span>
+            <span v-else>В процессе</span>
           </div>
         </div>
       </div>
@@ -79,7 +104,19 @@ const timerStore = useTimerStore()
 const tasksStore = useTasksStore()
 const router = useRouter()
 
-// Вычисляем фокус-время из сессий таймера за сегодня
+// Daily goal for tasks
+const dailyGoal = 8
+
+// Today's sessions count
+const todaySessionsCount = computed(() => {
+  return timerStore.sessions.filter((session) => {
+    const sessionDate = new Date(session.startAt)
+    const today = new Date()
+    return sessionDate.toDateString() === today.toDateString()
+  }).length
+})
+
+// Focus time calculations
 const focusTimeToday = computed(() => {
   const todaySessions = timerStore.sessions.filter((session) => {
     const sessionDate = new Date(session.startAt)
@@ -88,7 +125,7 @@ const focusTimeToday = computed(() => {
   })
 
   const totalMinutes = todaySessions.reduce((total, session) => {
-    if (session.endAt) {
+    if (session.endAt && session.phase === 'work') {
       const start = new Date(session.startAt)
       const end = new Date(session.endAt)
       return total + Math.round((end.getTime() - start.getTime()) / 60000)
@@ -105,7 +142,7 @@ const focusTimeToday = computed(() => {
   return `${minutes}м`
 })
 
-// Процент выполнения цели фокус-времени (цель: 4 часа = 240 минут)
+// Focus progress percentage (goal: 4 hours = 240 minutes)
 const focusProgressPercentage = computed(() => {
   const todaySessions = timerStore.sessions.filter((session) => {
     const sessionDate = new Date(session.startAt)
@@ -122,7 +159,7 @@ const focusProgressPercentage = computed(() => {
     return total
   }, 0)
 
-  const goalMinutes = 240 // 4 часа
+  const goalMinutes = 240 // 4 hours
   return Math.min(100, Math.round((totalMinutes / goalMinutes) * 100))
 })
 
@@ -130,52 +167,60 @@ const focusProgressClass = computed(() => {
   const percentage = focusProgressPercentage.value
   if (percentage >= 80) return 'excellent'
   if (percentage >= 50) return 'good'
-  return 'normal'
+  if (percentage > 0) return 'normal'
+  return 'empty'
 })
 
-const focusProgressStyle = computed(() => {
-  const percentage = focusProgressPercentage.value
+// Task completion calculations
+const completedTasks = computed(() => {
+  return tasksStore.tasks.filter(
+    (task) =>
+      task.status === 'completed' &&
+      new Date(task.createdAt).toDateString() === new Date().toDateString()
+  ).length
+})
+
+const totalTasks = computed(() => {
+  return tasksStore.tasks.filter(
+    (task) =>
+      new Date(task.createdAt).toDateString() === new Date().toDateString()
+  ).length
+})
+
+const taskCompletionPercentage = computed(() => {
+  if (totalTasks.value === 0) return 0
+  return Math.min(
+    100,
+    Math.round((completedTasks.value / totalTasks.value) * 100)
+  )
+})
+
+const taskProgressClass = computed(() => {
+  const percentage = taskCompletionPercentage.value
+  if (percentage >= 100) return 'excellent'
+  if (percentage >= 80) return 'good'
+  if (percentage >= 50) return 'normal'
+  return 'empty'
+})
+
+const taskCompletionStyle = computed(() => {
+  const percentage = taskCompletionPercentage.value
   return {
     '--progress': `${percentage}%`,
     '--progress-color':
-      percentage >= 80
+      percentage >= 100
         ? 'var(--success)'
-        : percentage >= 50
+        : percentage >= 80
         ? 'var(--warning)'
         : 'var(--accent-primary)',
   }
 })
 
-// Прогресс за неделю на основе выполненных задач
-const weeklyProgress = computed(() => {
-  const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
-  const today = new Date().getDay()
-  const adjustedToday = today === 0 ? 6 : today - 1
-
-  return days.map((day, index) => {
-    // Генерируем случайный прогресс для демонстрации
-    // В реальном приложении это должно браться из хранилища
-    const baseProgress = [65, 80, 45, 90, 70, 30, 20]
-    const progress = baseProgress[index] || Math.floor(Math.random() * 100)
-
-    return {
-      day,
-      progress,
-      isToday: index === adjustedToday,
-    }
-  })
-})
-
-const weeklyProgressAverage = computed(() => {
-  const total = weeklyProgress.value.reduce((sum, day) => sum + day.progress, 0)
-  return Math.round(total / weeklyProgress.value.length)
-})
-
-const weeklyProgressClass = computed(() => {
-  const average = weeklyProgressAverage.value
-  if (average >= 70) return 'excellent'
-  if (average >= 50) return 'good'
-  return 'normal'
+// Streak calculation (simplified)
+const currentStreak = computed(() => {
+  // This would normally come from stats store
+  // For now, return a mock value based on completion rate
+  return taskCompletionPercentage.value >= 50 ? 3 : 0
 })
 
 const goToAnalytics = () => {
@@ -219,13 +264,21 @@ const goToAnalytics = () => {
   border-radius: var(--radius-card);
   padding: var(--space-5);
   border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
 }
 
 .widget-header {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-4);
+}
+
+.widget-title {
+  display: flex;
   align-items: center;
-  margin-bottom: var(--space-2);
+  gap: var(--space-2);
 
   h3 {
     font-size: var(--text-lg);
@@ -233,39 +286,106 @@ const goToAnalytics = () => {
     color: var(--text-primary);
     margin: 0;
   }
-}
 
-.progress-value,
-.average-value {
-  font-size: var(--text-sm);
-  font-weight: var(--font-bold);
-
-  &.excellent {
-    color: var(--success);
-  }
-
-  &.good {
-    color: var(--warning);
-  }
-
-  &.normal {
+  :deep(svg) {
     color: var(--accent-primary);
   }
 }
 
-.widget-subtitle {
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
+.progress-value {
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+
+  &.excellent {
+    color: var(--success);
+    background: rgba(93, 242, 126, 0.1);
+  }
+
+  &.good {
+    color: var(--warning);
+    background: rgba(250, 204, 21, 0.1);
+  }
+
+  &.normal {
+    color: var(--accent-primary);
+    background: rgba(93, 95, 239, 0.1);
+  }
+
+  &.empty {
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.metric-content {
+  flex: 1;
   margin-bottom: var(--space-4);
 }
 
-.circular-progress-container {
-  @include flex-center;
-  margin: var(--space-4) 0;
-  position: relative;
+// Focus Time Widget Styles
+.time-display {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
-.circular-progress {
+.current-time {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+}
+
+.time-separator {
+  color: var(--text-secondary);
+  font-weight: var(--font-medium);
+}
+
+.target-time {
+  font-size: var(--text-lg);
+  color: var(--text-secondary);
+  font-weight: var(--font-medium);
+}
+
+.progress-bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: var(--space-4);
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width var(--duration-slow) var(--ease-bounce);
+
+  &.excellent {
+    background: var(--success);
+  }
+
+  &.good {
+    background: var(--warning);
+  }
+
+  &.normal {
+    background: var(--accent-primary);
+  }
+
+  &.empty {
+    background: var(--text-muted);
+  }
+}
+
+// Task Completion Widget Styles
+.completion-display {
+  @include flex-center;
+  margin: var(--space-4) 0;
+}
+
+.completion-circle {
   position: relative;
   width: 100px;
   height: 100px;
@@ -286,94 +406,78 @@ const goToAnalytics = () => {
   }
 }
 
-.progress-content {
+.completion-content {
   position: relative;
   z-index: 2;
   @include flex-center;
-  color: var(--text-secondary);
+  flex-direction: column;
 }
 
-.progress-label {
+.completion-text {
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
   text-align: center;
-  margin-top: var(--space-3);
-
-  span {
-    font-size: var(--text-sm);
-    font-weight: var(--font-medium);
-    color: var(--text-secondary);
-  }
 }
 
-.week-chart {
+.completion-stats {
+  margin-top: var(--space-4);
+}
+
+.stat-item {
   display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: var(--space-1);
-  height: 120px;
-  margin: var(--space-4) 0;
-  padding: 0 var(--space-1);
-}
-
-.day-bar {
-  flex: 1;
-  background: var(--accent-primary);
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  transition: all var(--duration-base);
-  position: relative;
-  min-height: 8px;
-  opacity: 0.6;
-
-  &.active {
-    background: var(--success);
-    opacity: 1;
-    transform: scaleY(1.1);
-  }
-
-  &.completed {
-    background: var(--accent-primary);
-    opacity: 0.8;
-  }
-}
-
-.day-label {
-  position: absolute;
-  bottom: -20px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: var(--text-xs);
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
   color: var(--text-secondary);
-  font-weight: var(--font-medium);
-  white-space: nowrap;
+
+  :deep(svg) {
+    color: var(--accent-primary);
+  }
 }
 
-.chart-legend {
+// Metric Footer
+.metric-footer {
   display: flex;
-  justify-content: center;
-  gap: var(--space-4);
-  margin-top: var(--space-6);
-  padding-top: var(--space-4);
+  justify-content: space-between;
+  align-items: center;
+  padding-top: var(--space-3);
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.legend-item {
+.session-count,
+.streak-count {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   font-size: var(--text-xs);
   color: var(--text-secondary);
+
+  :deep(svg) {
+    color: var(--accent-primary);
+  }
 }
 
-.legend-color {
-  width: 12px;
-  height: 12px;
-  border-radius: var(--radius-sm);
+.progress-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
 
-  &.today {
-    background: var(--success);
-  }
+  span {
+    &.excellent {
+      color: var(--success);
+    }
 
-  &.completed {
-    background: var(--accent-primary);
+    &.good {
+      color: var(--warning);
+    }
+
+    &.normal {
+      color: var(--accent-primary);
+    }
+
+    &.empty {
+      color: var(--text-secondary);
+    }
   }
 }
 
@@ -401,7 +505,7 @@ const goToAnalytics = () => {
 
 // Light theme adjustments
 [data-theme='light'] {
-  .circular-progress::before {
+  .completion-circle::before {
     background: var(--card-bg);
   }
 
@@ -411,6 +515,10 @@ const goToAnalytics = () => {
     &:hover {
       background: rgba(0, 0, 0, 0.1);
     }
+  }
+
+  .progress-bar {
+    background: rgba(0, 0, 0, 0.05);
   }
 }
 </style>

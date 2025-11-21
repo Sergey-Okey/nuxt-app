@@ -30,32 +30,32 @@
       </div>
     </div>
 
-    <!-- Daily Streak -->
+    <!-- Active Tasks -->
     <div class="stat-card warning">
       <div class="stat-icon">
-        <Icon name="lucide:flame" size="20" />
+        <Icon name="lucide:list" size="20" />
       </div>
       <div class="stat-content">
-        <div class="stat-value">{{ streakDays }}</div>
-        <div class="stat-label">Дней подряд</div>
-        <div class="stat-trend positive">
-          <Icon name="lucide:trending-up" size="12" />
-          <span>+{{ streakProgress }}</span>
+        <div class="stat-value">{{ activeTasks }}</div>
+        <div class="stat-label">Активные задачи</div>
+        <div class="stat-trend" :class="activeTasksTrend.type">
+          <Icon :name="activeTasksTrend.icon" size="12" />
+          <span>{{ activeTasksTrend.value }}</span>
         </div>
       </div>
     </div>
 
-    <!-- Productivity -->
+    <!-- Completion Rate -->
     <div class="stat-card info">
       <div class="stat-icon">
         <Icon name="lucide:bar-chart" size="20" />
       </div>
       <div class="stat-content">
-        <div class="stat-value">{{ productivity }}%</div>
-        <div class="stat-label">Продуктивность</div>
-        <div class="stat-trend" :class="productivityTrend.type">
-          <Icon :name="productivityTrend.icon" size="12" />
-          <span>{{ productivityTrend.value }}</span>
+        <div class="stat-value">{{ completionRate }}%</div>
+        <div class="stat-label">Выполнение</div>
+        <div class="stat-trend" :class="completionTrend.type">
+          <Icon :name="completionTrend.icon" size="12" />
+          <span>{{ completionTrend.value }}</span>
         </div>
       </div>
     </div>
@@ -74,23 +74,26 @@ const completedTasks = computed(() => {
   )
 })
 
-// Тренд выполнения задач
-const tasksTrend = computed(() => {
-  const completed = completedTasks.value
-  if (completed >= 8)
-    return { type: 'positive', value: 'Отлично!', icon: 'lucide:trending-up' }
-  if (completed >= 5)
-    return { type: 'positive', value: '+2', icon: 'lucide:trending-up' }
-  if (completed >= 3)
-    return { type: 'neutral', value: 'Стабильно', icon: 'lucide:minus' }
-  return {
-    type: 'negative',
-    value: 'Можно лучше',
-    icon: 'lucide:trending-down',
-  }
+// Активные задачи сегодня
+const activeTasks = computed(() => {
+  return (
+    tasksStore.todayTasks?.filter((task) => task.status === 'active').length ||
+    0
+  )
 })
 
-// Фокус-время сегодня
+// Общее количество задач сегодня
+const totalTasks = computed(() => {
+  return tasksStore.todayTasks?.length || 0
+})
+
+// Процент выполнения
+const completionRate = computed(() => {
+  if (totalTasks.value === 0) return 0
+  return Math.round((completedTasks.value / totalTasks.value) * 100)
+})
+
+// Фокус-время сегодня (в часах и минутах)
 const focusTime = computed(() => {
   const todaySessions = timerStore.sessions.filter((session) => {
     const sessionDate = new Date(session.startAt)
@@ -111,9 +114,21 @@ const focusTime = computed(() => {
   const minutes = totalMinutes % 60
 
   if (hours > 0) {
-    return `${hours}ч`
+    return `${hours}ч ${minutes}м`
   }
   return `${minutes}м`
+})
+
+// Тренд выполнения задач
+const tasksTrend = computed(() => {
+  const completed = completedTasks.value
+  if (completed >= 8)
+    return { type: 'positive', value: 'Отлично!', icon: 'lucide:trending-up' }
+  if (completed >= 5)
+    return { type: 'positive', value: 'Хорошо', icon: 'lucide:trending-up' }
+  if (completed >= 3)
+    return { type: 'neutral', value: 'Норма', icon: 'lucide:minus' }
+  return { type: 'negative', value: 'Мало', icon: 'lucide:trending-down' }
 })
 
 // Тренд фокус-времени
@@ -134,63 +149,40 @@ const focusTrend = computed(() => {
   }, 0)
 
   if (totalMinutes >= 180)
-    return { type: 'positive', value: '+45м', icon: 'lucide:trending-up' }
+    return { type: 'positive', value: 'Много', icon: 'lucide:trending-up' }
   if (totalMinutes >= 120)
-    return { type: 'positive', value: '+15м', icon: 'lucide:trending-up' }
+    return { type: 'positive', value: 'Хорошо', icon: 'lucide:trending-up' }
   if (totalMinutes >= 60)
     return { type: 'neutral', value: 'Норма', icon: 'lucide:minus' }
   return { type: 'negative', value: 'Мало', icon: 'lucide:trending-down' }
 })
 
-// Серия дней (демо данные)
-const streakDays = computed(() => {
-  // В реальном приложении это должно браться из хранилища статистики
-  return 7
-})
-
-const streakProgress = computed(() => {
-  // Демо прогресс
-  return 2
-})
-
-// Продуктивность (на основе выполненных задач и фокус-времени)
-const productivity = computed(() => {
-  const completed = completedTasks.value
-  const total = tasksStore.todayTasks?.length || 1
-  const completionRate = (completed / total) * 100
-
-  const todaySessions = timerStore.sessions.filter((session) => {
-    const sessionDate = new Date(session.startAt)
-    const today = new Date()
-    return sessionDate.toDateString() === today.toDateString()
-  })
-
-  const totalMinutes = todaySessions.reduce((total, session) => {
-    if (session.endAt && session.phase === 'work') {
-      const start = new Date(session.startAt)
-      const end = new Date(session.endAt)
-      return total + Math.round((end.getTime() - start.getTime()) / 60000)
+// Тренд активных задач
+const activeTasksTrend = computed(() => {
+  const active = activeTasks.value
+  if (active === 0)
+    return {
+      type: 'positive',
+      value: 'Все сделано!',
+      icon: 'lucide:check-circle',
     }
-    return total
-  }, 0)
-
-  // Комбинируем выполнение задач и фокус-время
-  const timeScore = Math.min(100, (totalMinutes / 240) * 100) // 4 часа = 100%
-  const taskScore = completionRate
-
-  return Math.round(timeScore * 0.4 + taskScore * 0.6) // Взвешенная сумма
+  if (active <= 3)
+    return { type: 'positive', value: 'Мало', icon: 'lucide:trending-down' }
+  if (active <= 6)
+    return { type: 'neutral', value: 'Норма', icon: 'lucide:minus' }
+  return { type: 'negative', value: 'Много', icon: 'lucide:alert-circle' }
 })
 
-// Тренд продуктивности
-const productivityTrend = computed(() => {
-  const prod = productivity.value
-  if (prod >= 85)
-    return { type: 'positive', value: 'Высокая', icon: 'lucide:trending-up' }
-  if (prod >= 70)
-    return { type: 'positive', value: '+8%', icon: 'lucide:trending-up' }
-  if (prod >= 50)
-    return { type: 'neutral', value: 'Стабильно', icon: 'lucide:minus' }
-  return { type: 'negative', value: 'Низкая', icon: 'lucide:trending-down' }
+// Тренд процента выполнения
+const completionTrend = computed(() => {
+  const rate = completionRate.value
+  if (rate >= 90)
+    return { type: 'positive', value: 'Отлично!', icon: 'lucide:trending-up' }
+  if (rate >= 70)
+    return { type: 'positive', value: 'Хорошо', icon: 'lucide:trending-up' }
+  if (rate >= 50)
+    return { type: 'neutral', value: 'Норма', icon: 'lucide:minus' }
+  return { type: 'negative', value: 'Низко', icon: 'lucide:trending-down' }
 })
 </script>
 
