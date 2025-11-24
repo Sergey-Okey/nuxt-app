@@ -274,21 +274,8 @@ const goToProfile = () => {
     transition: opacity var(--duration-base);
   }
 
-  &:hover {
-    color: white;
-    transform: scale(1.05);
-
-    &::before {
-      opacity: 1;
-    }
-
-    :deep(svg) {
-      color: white;
-    }
-  }
-
   &:active {
-    transform: scale(0.98);
+    transform: scale(0.58);
   }
 
   :deep(svg) {
