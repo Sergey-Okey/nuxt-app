@@ -3,7 +3,7 @@
     <div class="modal-backdrop" @click="closeModal"></div>
 
     <div class="modal-container">
-      <!-- iOS-style Header -->
+      <!-- Header -->
       <div class="modal-header">
         <div class="header-content">
           <h2 class="modal-title">Уведомления</h2>
@@ -22,13 +22,23 @@
         </div>
       </div>
 
-      <!-- Notifications Content -->
+      <!-- Content -->
       <div class="notifications-content">
         <NotificationsList
-          :notifications="notifications"
+          :notifications="sortedNotifications"
           @click="handleNotificationClick"
           @remove="removeNotification"
+          @markAsRead="markAsRead"
         />
+
+        <!-- Empty State -->
+        <div v-if="notifications.length === 0" class="empty-state">
+          <div class="empty-icon">
+            <Icon name="lucide:bell-off" size="48" />
+          </div>
+          <h3>Нет уведомлений</h3>
+          <p>Здесь появятся важные уведомления и напоминания</p>
+        </div>
       </div>
     </div>
   </div>
@@ -39,10 +49,17 @@ import type { Notification } from '~/stores/notifications'
 
 const notificationsStore = useNotificationsStore()
 
-// Use store state
+// Store state
 const isOpen = computed(() => notificationsStore.isModalOpen)
 const notifications = computed(() => notificationsStore.notifications)
 const unreadCount = computed(() => notificationsStore.unreadCount)
+
+// Sort notifications by date (newest first)
+const sortedNotifications = computed(() => {
+  return [...notifications.value].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  )
+})
 
 // Methods
 const closeModal = () => {
@@ -57,13 +74,17 @@ const removeNotification = (id: string) => {
   notificationsStore.removeNotification(id)
 }
 
+const markAsRead = (id: string) => {
+  notificationsStore.markAsRead(id)
+}
+
 const handleNotificationClick = (notification: Notification) => {
   if (!notification.read) {
-    notificationsStore.markAsRead(notification.id)
+    markAsRead(notification.id)
   }
 
-  // Handle navigation if needed
-  if (notification.actionUrl) {
+  // Handle notification action
+  if (notification.actionType === 'navigate' && notification.actionUrl) {
     const router = useRouter()
     router.push(notification.actionUrl)
     closeModal()
@@ -72,7 +93,6 @@ const handleNotificationClick = (notification: Notification) => {
 
 // Keyboard and gesture handlers
 onMounted(() => {
-  // Escape key handler
   const handleEscape = (event: KeyboardEvent) => {
     if (event.key === 'Escape' && isOpen.value) {
       closeModal()
@@ -271,6 +291,58 @@ onMounted(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  padding: var(--space-3);
+}
+
+.empty-state {
+  @include flex-center;
+  flex-direction: column;
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+  color: var(--text-secondary);
+}
+
+.empty-icon {
+  @include flex-center;
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.05);
+  margin-bottom: var(--space-4);
+
+  :deep(svg) {
+    color: var(--text-secondary);
+    opacity: 0.5;
+  }
+}
+
+.empty-state h3 {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.empty-state p {
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+// Light theme adjustments
+[data-theme='light'] {
+  .modal-backdrop {
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  .modal-header::after {
+    background: rgba(0, 0, 0, 0.1);
+  }
+
+  .close-button {
+    background: rgba(0, 0, 0, 0.05);
+  }
 }
 
 // Mobile full-screen styles
@@ -288,16 +360,9 @@ onMounted(() => {
       display: block;
     }
   }
-}
 
-// Light theme adjustments
-[data-theme='light'] {
-  .modal-backdrop {
-    background: rgba(0, 0, 0, 0.2);
-  }
-
-  .modal-header::after {
-    background: rgba(0, 0, 0, 0.1);
+  .notifications-content {
+    padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
   }
 }
 </style>

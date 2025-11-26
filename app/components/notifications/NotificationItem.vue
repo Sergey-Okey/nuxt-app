@@ -1,20 +1,21 @@
 <template>
-  <div
-    class="notification-item"
-    :class="{
-      unread: !notification.read,
-      [notification.type]: true,
-    }"
-    @click="handleClick"
-  >
+  <div class="notification-wrapper">
     <div
-      class="notification-swipe"
-      :style="swipeStyle"
+      class="notification-item"
+      :class="[
+        `type-${notification.type}`,
+        {
+          read: notification.read,
+          swiping: isSwiping,
+        },
+      ]"
       @touchstart="onTouchStart"
       @touchmove="onTouchMove"
       @touchend="onTouchEnd"
+      @click="handleClick"
     >
-      <div class="notification-content">
+      <!-- Main Content -->
+      <div class="notification-content" :style="contentStyle">
         <div class="notification-icon">
           <Icon :name="notificationIcon" size="20" />
         </div>
@@ -28,22 +29,22 @@
         <div class="notification-actions">
           <button
             v-if="!notification.read"
-            class="mark-read-button"
+            class="mark-read-btn"
             @click.stop="markAsRead"
             title="Пометить прочитанным"
           >
-            <Icon name="lucide:circle" size="16" />
+            <Icon name="lucide:check" size="16" />
           </button>
         </div>
       </div>
-    </div>
 
-    <!-- Swipe Action -->
-    <div class="swipe-action" :class="{ visible: showSwipeAction }">
-      <button class="delete-action" @click="removeNotification">
-        <Icon name="lucide:trash-2" size="18" />
-        <span>Удалить</span>
-      </button>
+      <!-- Swipe Action -->
+      <div class="swipe-action" :class="{ visible: showSwipeAction }">
+        <div class="swipe-background">
+          <Icon name="lucide:trash-2" size="20" />
+          <span>Удалить</span>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -59,55 +60,58 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   click: [notification: Notification]
   remove: [id: string]
+  markAsRead: [id: string]
 }>()
 
-const notificationsStore = useNotificationsStore()
-
 // Swipe gesture handling
-const touchStartX = ref(0)
-const currentTranslate = ref(0)
 const isSwiping = ref(false)
-const showSwipeAction = ref(false)
+const startX = ref(0)
+const currentX = ref(0)
+const swipeDistance = ref(0)
+const SWIPE_THRESHOLD = 80
 
-const swipeStyle = computed(() => ({
-  transform: `translateX(${currentTranslate.value}px)`,
-  transition: isSwiping.value
-    ? 'none'
-    : 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+const contentStyle = computed(() => ({
+  transform: `translateX(${swipeDistance.value}px)`,
 }))
 
+const showSwipeAction = computed(() => {
+  return swipeDistance.value < -SWIPE_THRESHOLD
+})
+
 const onTouchStart = (e: TouchEvent) => {
-  touchStartX.value = e.touches[0].clientX
   isSwiping.value = true
+  startX.value = e.touches[0].clientX
+  currentX.value = startX.value
 }
 
 const onTouchMove = (e: TouchEvent) => {
   if (!isSwiping.value) return
 
-  const currentX = e.touches[0].clientX
-  const diff = currentX - touchStartX.value
+  currentX.value = e.touches[0].clientX
+  swipeDistance.value = Math.min(0, currentX.value - startX.value)
 
-  // Only allow left swipe (negative values)
-  if (diff < 0) {
-    currentTranslate.value = Math.max(diff, -80) // Limit swipe distance
+  // Prevent scrolling when swiping
+  if (Math.abs(swipeDistance.value) > 10) {
+    e.preventDefault()
   }
 }
 
 const onTouchEnd = () => {
-  isSwiping.value = false
-
-  // If swiped more than 60px, show delete action
-  if (currentTranslate.value < -60) {
-    showSwipeAction.value = true
-    currentTranslate.value = -80
+  if (swipeDistance.value < -SWIPE_THRESHOLD) {
+    // Trigger delete with animation
+    swipeDistance.value = -200
+    setTimeout(() => {
+      emit('remove', props.notification.id)
+    }, 300)
   } else {
-    // Return to original position
-    currentTranslate.value = 0
-    showSwipeAction.value = false
+    // Reset position
+    swipeDistance.value = 0
   }
+
+  isSwiping.value = false
 }
 
-// Notification icon based on type
+// Notification data
 const notificationIcon = computed(() => {
   const icons = {
     info: 'lucide:info',
@@ -121,75 +125,141 @@ const notificationIcon = computed(() => {
   return icons[props.notification.type] || 'lucide:bell'
 })
 
-// Format time
 const formattedTime = computed(() => {
-  const now = new Date()
-  const notificationTime = new Date(props.notification.createdAt)
-  const diff = now.getTime() - notificationTime.getTime()
+  try {
+    // Используем timestamp из хранилища
+    const notificationDate = new Date(props.notification.timestamp)
 
-  const minutes = Math.floor(diff / 60000)
-  const hours = Math.floor(diff / 3600000)
-  const days = Math.floor(diff / 86400000)
+    // Проверяем валидность даты
+    if (isNaN(notificationDate.getTime())) {
+      return 'Недавно'
+    }
 
-  if (minutes < 1) return 'Только что'
-  if (minutes < 60) return `${minutes} мин назад`
-  if (hours < 24) return `${hours} ч назад`
-  if (days === 1) return 'Вчера'
-  if (days < 7) return `${days} д назад`
+    const now = new Date()
+    const diff = now.getTime() - notificationDate.getTime()
 
-  return notificationTime.toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'short',
-  })
+    const minutes = Math.floor(diff / 60000)
+    const hours = Math.floor(diff / 3600000)
+    const days = Math.floor(diff / 86400000)
+
+    if (minutes < 1) return 'Только что'
+    if (minutes < 60) return `${minutes} мин назад`
+    if (hours < 24) return `${hours} ч назад`
+    if (days === 1) return 'Вчера'
+    if (days < 7) return `${days} д назад`
+
+    return notificationDate.toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'short',
+    })
+  } catch (error) {
+    console.error('Error formatting notification time:', error)
+    return 'Недавно'
+  }
 })
 
 // Methods
 const handleClick = () => {
-  if (!props.notification.read) {
-    markAsRead()
-  }
-
   emit('click', props.notification)
-
-  // Handle navigation if needed
-  if (props.notification.actionUrl) {
-    const router = useRouter()
-    router.push(props.notification.actionUrl)
-  }
 }
 
 const markAsRead = () => {
-  notificationsStore.markAsRead(props.notification.id)
+  emit('markAsRead', props.notification.id)
 }
 
-const removeNotification = () => {
-  emit('remove', props.notification.id)
-  // Reset swipe state
-  currentTranslate.value = 0
-  showSwipeAction.value = false
+// Mouse events for desktop testing
+const isMouseDown = ref(false)
+
+const onMouseDown = (e: MouseEvent) => {
+  isMouseDown.value = true
+  startX.value = e.clientX
+  currentX.value = startX.value
 }
 
-// Reset swipe when notification changes
-watch(
-  () => props.notification,
-  () => {
-    currentTranslate.value = 0
-    showSwipeAction.value = false
+const onMouseMove = (e: MouseEvent) => {
+  if (!isMouseDown.value) return
+
+  currentX.value = e.clientX
+  swipeDistance.value = Math.min(0, currentX.value - startX.value)
+}
+
+const onMouseUp = () => {
+  if (!isMouseDown.value) return
+
+  if (swipeDistance.value < -SWIPE_THRESHOLD) {
+    swipeDistance.value = -200
+    setTimeout(() => {
+      emit('remove', props.notification.id)
+    }, 300)
+  } else {
+    swipeDistance.value = 0
   }
-)
+
+  isMouseDown.value = false
+}
+
+// Add mouse events for desktop testing
+onMounted(() => {
+  const element = document.querySelector('.notification-item')
+  if (element) {
+    element.addEventListener('mousedown', onMouseDown)
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  }
+})
+
+onUnmounted(() => {
+  const element = document.querySelector('.notification-item')
+  if (element) {
+    element.removeEventListener('mousedown', onMouseDown)
+    document.removeEventListener('mousemove', onMouseMove)
+    document.removeEventListener('mouseup', onMouseUp)
+  }
+})
 </script>
 
 <style scoped lang="scss">
+.notification-wrapper {
+  position: relative;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
 .notification-item {
   position: relative;
   border-radius: var(--radius-card);
   overflow: hidden;
-  margin-bottom: var(--space-2);
+  transition: all 0.3s ease;
+
+  &.swiping {
+    transition: transform 0.1s ease;
+  }
+
+  &:active:not(.swiping) {
+    transform: scale(0.98);
+  }
+}
+
+.notification-content {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
   background: var(--surface-bg);
   border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-card);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+  z-index: 2;
 
-  &.unread {
-    background: rgba(93, 95, 239, 0.05);
+  .notification-item.read & {
+    opacity: 0.7;
+  }
+
+  .notification-item:not(.read) & {
+    background: rgba(93, 95, 239, 0.03);
     border-color: rgba(93, 95, 239, 0.1);
 
     &::before {
@@ -201,54 +271,8 @@ watch(
       height: 6px;
       background: var(--accent-primary);
       border-radius: 50%;
-      z-index: 2;
     }
   }
-
-  // Type-based border colors
-  &.info {
-    border-left: 3px solid var(--accent-primary);
-  }
-
-  &.success {
-    border-left: 3px solid var(--success);
-  }
-
-  &.warning {
-    border-left: 3px solid var(--warning);
-  }
-
-  &.error {
-    border-left: 3px solid var(--error);
-  }
-
-  &.task {
-    border-left: 3px solid var(--accent-secondary);
-  }
-
-  &.timer {
-    border-left: 3px solid var(--info);
-  }
-
-  &.achievement {
-    border-left: 3px solid var(--warning);
-  }
-}
-
-.notification-swipe {
-  background: inherit;
-  border-radius: var(--radius-card);
-  cursor: pointer;
-  user-select: none;
-}
-
-.notification-content {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  background: inherit;
-  border-radius: var(--radius-card);
 }
 
 .notification-icon {
@@ -257,10 +281,62 @@ watch(
   width: 32px;
   height: 32px;
   border-radius: var(--radius-button);
-  background: rgba(255, 255, 255, 0.1);
+  margin-top: 2px;
 
-  :deep(svg) {
-    color: var(--text-secondary);
+  .notification-item.type-info & {
+    background: rgba(96, 165, 250, 0.1);
+
+    :deep(svg) {
+      color: var(--info);
+    }
+  }
+
+  .notification-item.type-success & {
+    background: rgba(93, 242, 126, 0.1);
+
+    :deep(svg) {
+      color: var(--success);
+    }
+  }
+
+  .notification-item.type-warning & {
+    background: rgba(250, 204, 21, 0.1);
+
+    :deep(svg) {
+      color: var(--warning);
+    }
+  }
+
+  .notification-item.type-error & {
+    background: rgba(248, 113, 113, 0.1);
+
+    :deep(svg) {
+      color: var(--error);
+    }
+  }
+
+  .notification-item.type-task & {
+    background: rgba(93, 95, 239, 0.1);
+
+    :deep(svg) {
+      color: var(--accent-primary);
+    }
+  }
+
+  .notification-item.type-timer & {
+    background: rgba(139, 69, 255, 0.1);
+
+    :deep(svg) {
+      color: #8b45ff;
+    }
+  }
+
+  .notification-item.type-achievement & {
+    background: rgba(255, 193, 7, 0.1);
+
+    :deep(svg) {
+      color: #ffc107;
+    }
   }
 }
 
@@ -292,88 +368,138 @@ watch(
 
 .notification-actions {
   display: flex;
-  gap: var(--space-2);
-}
+  gap: var(--space-1);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 
-.mark-read-button {
-  @include button-reset;
-  @include flex-center;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  transition: all var(--duration-base);
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--accent-primary);
+  .notification-content:hover & {
+    opacity: 1;
   }
 }
 
+.mark-read-btn {
+  @include button-reset;
+  @include flex-center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-button);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: var(--success);
+    color: white;
+    transform: scale(1.1);
+  }
+}
+
+// Swipe Action
 .swipe-action {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 80px;
-  background: var(--error);
-  border-radius: 0 var(--radius-card) var(--radius-card) 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  left: 0;
+  z-index: 1;
+  pointer-events: none;
   opacity: 0;
-  transform: scaleX(0);
-  transform-origin: right;
-  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: opacity 0.3s ease;
 
   &.visible {
     opacity: 1;
-    transform: scaleX(1);
   }
 }
 
-.delete-action {
-  @include button-reset;
+.swipe-background {
   @include flex-center;
   flex-direction: column;
   gap: var(--space-1);
+  height: 100%;
+  background: linear-gradient(90deg, transparent 0%, var(--error) 100%);
   color: white;
+  padding-left: 60%;
   font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  padding: var(--space-2);
+  font-weight: var(--font-semibold);
 
   :deep(svg) {
     color: white;
   }
 }
 
-// Hover effects for desktop
-@media (hover: hover) {
-  .notification-item:hover {
-    border-color: rgba(255, 255, 255, 0.1);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
-  }
-}
-
 // Light theme adjustments
 [data-theme='light'] {
-  .notification-item {
+  .notification-content {
     background: var(--surface-bg);
     border: 1px solid rgba(0, 0, 0, 0.05);
 
-    &.unread {
+    .notification-item:not(.read) & {
       background: rgba(93, 95, 239, 0.05);
       border-color: rgba(93, 95, 239, 0.1);
     }
   }
 
-  .notification-icon {
+  .mark-read-btn {
     background: rgba(0, 0, 0, 0.05);
   }
 
-  .mark-read-button:hover {
-    background: rgba(0, 0, 0, 0.05);
+  .notification-icon {
+    .notification-item.type-info & {
+      background: rgba(96, 165, 250, 0.15);
+    }
+
+    .notification-item.type-success & {
+      background: rgba(93, 242, 126, 0.15);
+    }
+
+    .notification-item.type-warning & {
+      background: rgba(250, 204, 21, 0.15);
+    }
+
+    .notification-item.type-error & {
+      background: rgba(248, 113, 113, 0.15);
+    }
+
+    .notification-item.type-task & {
+      background: rgba(93, 95, 239, 0.15);
+    }
+
+    .notification-item.type-timer & {
+      background: rgba(139, 69, 255, 0.15);
+    }
+
+    .notification-item.type-achievement & {
+      background: rgba(255, 193, 7, 0.15);
+    }
+  }
+}
+
+// Mobile optimizations
+@include breakpoint(xs) {
+  .notification-content {
+    padding: var(--space-3);
+  }
+
+  .notification-actions {
+    opacity: 1; // Always show on mobile
+  }
+}
+
+// Animation for removal
+.notification-item {
+  &.removing {
+    animation: slideOutRight 0.3s ease forwards;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
   }
 }
 </style>
