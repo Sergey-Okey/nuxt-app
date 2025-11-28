@@ -6,316 +6,502 @@
       <!-- Header -->
       <div class="modal-header">
         <div class="header-content">
-          <h2 class="modal-title">Новая задача</h2>
-          <div class="header-actions">
-            <button class="close-button" @click="closeModal">
-              <Icon name="lucide:x" size="20" />
-            </button>
-          </div>
+          <button class="cancel-button" @click="closeModal">Отмена</button>
+          <h2 class="modal-title">
+            {{ isEditing ? 'Редактировать' : 'Новая задача' }}
+          </h2>
+          <button class="save-button" :disabled="!canSave" @click="saveTask">
+            {{ isEditing ? 'Сохранить' : 'Создать' }}
+          </button>
         </div>
       </div>
 
-      <!-- Form Content -->
-      <div class="form-content">
-        <form @submit.prevent="submitTask" class="task-form">
+      <!-- Content -->
+      <div class="modal-content">
+        <div class="form-section">
           <!-- Title -->
-          <div class="form-group">
-            <label class="form-label">
-              <Icon name="lucide:type" size="16" />
-              <span>Название задачи *</span>
-            </label>
+          <div class="input-group">
+            <label class="input-label">Название задачи</label>
             <input
-              v-model="form.title"
+              v-model="formData.title"
               type="text"
-              class="form-input"
               placeholder="Что нужно сделать?"
-              required
+              class="text-input"
               maxlength="100"
             />
-            <div class="char-counter">{{ form.title.length }}/100</div>
+            <div class="input-counter">{{ formData.title.length }}/100</div>
           </div>
 
           <!-- Description -->
-          <div class="form-group">
-            <label class="form-label">
-              <Icon name="lucide:file-text" size="16" />
-              <span>Описание</span>
-            </label>
+          <div class="input-group">
+            <label class="input-label">Описание (необязательно)</label>
             <textarea
-              v-model="form.description"
-              class="form-textarea"
-              placeholder="Дополнительные детали..."
+              v-model="formData.description"
+              placeholder="Добавьте подробности..."
+              class="text-input textarea"
               rows="3"
               maxlength="500"
             ></textarea>
-            <div class="char-counter">{{ form.description.length }}/500</div>
-          </div>
-
-          <!-- Category & Priority -->
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">
-                <Icon name="lucide:folder" size="16" />
-                <span>Категория *</span>
-              </label>
-              <div class="category-grid">
-                <button
-                  v-for="category in tasksStore.categories"
-                  :key="category.id"
-                  type="button"
-                  class="category-option"
-                  :class="{ active: form.category === category.id }"
-                  @click="form.category = category.id"
-                >
-                  <div
-                    class="category-icon"
-                    :style="{ backgroundColor: category.color }"
-                  >
-                    <Icon :name="category.icon" size="16" />
-                  </div>
-                  <span class="category-name">{{ category.name }}</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">
-                <Icon name="lucide:flag" size="16" />
-                <span>Приоритет *</span>
-              </label>
-              <div class="priority-options">
-                <button
-                  v-for="priority in priorityOptions"
-                  :key="priority.value"
-                  type="button"
-                  class="priority-option"
-                  :class="[
-                    priority.value,
-                    { active: form.priority === priority.value },
-                  ]"
-                  @click="form.priority = priority.value"
-                >
-                  <Icon :name="priority.icon" size="16" />
-                  <span>{{ priority.label }}</span>
-                </button>
-              </div>
+            <div class="input-counter">
+              {{ formData.description.length }}/500
             </div>
           </div>
 
-          <!-- Due Date & Time Estimate -->
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">
+          <!-- Category -->
+          <div class="input-group">
+            <label class="input-label">Категория</label>
+            <div class="category-selector">
+              <button
+                v-for="category in availableCategories"
+                :key="category.id"
+                class="category-option"
+                :class="{ active: formData.category === category.id }"
+                @click="formData.category = category.id"
+              >
+                <div
+                  class="category-color"
+                  :style="{ backgroundColor: category.color }"
+                ></div>
+                <span class="category-name">{{ category.name }}</span>
+                <Icon :name="category.icon" size="16" />
+              </button>
+
+              <!-- Add Custom Category -->
+              <button
+                class="category-option add-category"
+                @click="showCategoryCreator = true"
+              >
+                <div class="category-color add-color">
+                  <Icon name="lucide:plus" size="16" />
+                </div>
+                <span class="category-name">Новая категория</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Priority -->
+          <div class="input-group">
+            <label class="input-label">Приоритет</label>
+            <div class="priority-selector">
+              <button
+                v-for="priority in priorities"
+                :key="priority.value"
+                class="priority-option"
+                :class="[
+                  priority.value,
+                  { active: formData.priority === priority.value },
+                ]"
+                @click="formData.priority = priority.value"
+              >
+                <Icon :name="priority.icon" size="16" />
+                <span>{{ priority.label }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Due Date -->
+          <div class="input-group">
+            <label class="input-label">Срок выполнения</label>
+            <div class="date-selector">
+              <button
+                class="date-option"
+                :class="{ active: formData.dueAt }"
+                @click="toggleDatePicker"
+              >
                 <Icon name="lucide:calendar" size="16" />
-                <span>Срок выполнения</span>
-              </label>
+                <span>{{ dueDateDisplay }}</span>
+                <button
+                  v-if="formData.dueAt"
+                  class="clear-date"
+                  @click.stop="clearDueDate"
+                >
+                  <Icon name="lucide:x" size="14" />
+                </button>
+              </button>
+            </div>
+
+            <!-- Date Picker -->
+            <div v-if="showDatePicker" class="date-picker">
               <input
-                v-model="form.dueDate"
-                type="date"
-                class="form-input"
-                :min="today"
+                v-model="formData.dueAt"
+                type="datetime-local"
+                class="date-input"
+                :min="minDate"
               />
             </div>
+          </div>
 
-            <div class="form-group">
-              <label class="form-label">
-                <Icon name="lucide:clock" size="16" />
-                <span>Оценка времени (мин)</span>
-              </label>
+          <!-- Time Estimation -->
+          <div class="input-group">
+            <label class="input-label">Оценка времени (минуты)</label>
+            <div class="time-estimation">
+              <button
+                v-for="time in timeOptions"
+                :key="time.value"
+                class="time-option"
+                :class="{ active: formData.estimatedMinutes === time.value }"
+                @click="formData.estimatedMinutes = time.value"
+              >
+                {{ time.label }}
+              </button>
               <input
-                v-model="form.estimatedMinutes"
+                v-model.number="formData.estimatedMinutes"
                 type="number"
-                class="form-input"
-                placeholder="60"
-                min="5"
+                placeholder="Другое..."
+                class="time-input"
+                min="1"
                 max="480"
               />
             </div>
           </div>
 
           <!-- Tags -->
-          <div class="form-group">
-            <label class="form-label">
-              <Icon name="lucide:tag" size="16" />
-              <span>Теги</span>
-            </label>
+          <div class="input-group">
+            <label class="input-label">Теги</label>
             <div class="tags-input">
               <div class="tags-list">
-                <span
-                  v-for="(tag, index) in form.tags"
-                  :key="index"
-                  class="tag"
-                >
+                <span v-for="tag in formData.tags" :key="tag" class="tag">
                   {{ tag }}
-                  <button
-                    type="button"
-                    class="tag-remove"
-                    @click="removeTag(index)"
-                  >
+                  <button @click="removeTag(tag)" class="tag-remove">
                     <Icon name="lucide:x" size="12" />
                   </button>
                 </span>
               </div>
               <input
-                v-model="tagInput"
+                v-model="newTag"
                 type="text"
-                class="tag-input"
                 placeholder="Добавить тег..."
-                @keydown.enter.prevent="addTag"
+                class="tag-input"
+                @keydown.enter="addTag"
                 @keydown.backspace="handleBackspace"
                 maxlength="20"
               />
             </div>
           </div>
 
-          <!-- Form Actions -->
-          <div class="form-actions">
+          <!-- Timer Section (only when editing and task has timer) -->
+          <div v-if="isEditing && task?.spentMinutes" class="input-group">
+            <label class="input-label">Затраченное время</label>
+            <div class="time-spent">
+              <Icon name="lucide:clock" size="16" />
+              <span>{{ formatTimeSpent(task.spentMinutes) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Category Creator -->
+    <div v-if="showCategoryCreator" class="category-creator-modal">
+      <div class="modal-backdrop" @click="showCategoryCreator = false"></div>
+      <div class="modal-container small">
+        <div class="modal-header">
+          <h3>Новая категория</h3>
+          <button class="close-button" @click="showCategoryCreator = false">
+            <Icon name="lucide:x" size="20" />
+          </button>
+        </div>
+        <div class="modal-content">
+          <div class="input-group">
+            <label>Название категории</label>
+            <input
+              v-model="newCategory.name"
+              type="text"
+              placeholder="Название"
+              class="text-input"
+              maxlength="20"
+            />
+          </div>
+          <div class="input-group">
+            <label>Цвет</label>
+            <div class="color-picker">
+              <button
+                v-for="color in availableColors"
+                :key="color"
+                class="color-option"
+                :class="{ active: newCategory.color === color }"
+                :style="{ backgroundColor: color }"
+                @click="newCategory.color = color"
+              ></button>
+            </div>
+          </div>
+          <div class="input-group">
+            <label>Иконка</label>
+            <div class="icon-picker">
+              <button
+                v-for="icon in availableIcons"
+                :key="icon"
+                class="icon-option"
+                :class="{ active: newCategory.icon === icon }"
+                @click="newCategory.icon = icon"
+              >
+                <Icon :name="icon" size="20" />
+              </button>
+            </div>
+          </div>
+          <div class="modal-actions">
             <button
-              type="button"
-              class="action-button secondary"
-              @click="closeModal"
+              class="button secondary"
+              @click="showCategoryCreator = false"
             >
               Отмена
             </button>
             <button
-              type="submit"
-              class="action-button primary"
-              :disabled="!isFormValid"
+              class="button primary"
+              :disabled="!newCategory.name"
+              @click="createCustomCategory"
             >
-              <Icon name="lucide:plus" size="16" />
-              <span>Создать задачу</span>
+              Создать
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-const tasksStore = useTasksStore()
-const emit = defineEmits(['close', 'created'])
+import { Task, Category } from '~/stores/tasks'
 
-// Modal state
-const isOpen = defineModel<boolean>({ default: false })
+interface Props {
+  isOpen: boolean
+  task?: Task | null
+}
+
+interface Emits {
+  (e: 'close'): void
+  (e: 'saved', task: Task): void
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
+
+const tasksStore = useTasksStore()
 
 // Form data
-const form = reactive({
+const formData = reactive({
   title: '',
   description: '',
-  category: 'work',
+  category: 'personal',
   priority: 'medium' as 'low' | 'medium' | 'high',
-  dueDate: '',
+  dueAt: '' as string | undefined,
   estimatedMinutes: undefined as number | undefined,
   tags: [] as string[],
 })
 
-const tagInput = ref('')
+// UI state
+const showDatePicker = ref(false)
+const showCategoryCreator = ref(false)
+const newTag = ref('')
 
-// Computed
-const today = computed(() => {
-  return new Date().toISOString().split('T')[0]
+// New category form
+const newCategory = reactive({
+  name: '',
+  color: '#5d5fef',
+  icon: 'lucide:tag',
 })
 
-const isFormValid = computed(() => {
-  return form.title.trim().length > 0 && form.category
+// Computed properties
+const isEditing = computed(() => !!props.task)
+const canSave = computed(() => formData.title.trim().length > 0)
+
+const availableCategories = computed(() => tasksStore.categories)
+
+const dueDateDisplay = computed(() => {
+  if (!formData.dueAt) return 'Без срока'
+  const date = new Date(formData.dueAt)
+  return date.toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 })
 
-const priorityOptions = [
-  {
-    value: 'low',
-    label: 'Низкий',
-    icon: 'lucide:arrow-down',
-    color: 'var(--success)',
-  },
-  {
-    value: 'medium',
-    label: 'Средний',
-    icon: 'lucide:minus',
-    color: 'var(--warning)',
-  },
-  {
-    value: 'high',
-    label: 'Высокий',
-    icon: 'lucide:arrow-up',
-    color: 'var(--error)',
-  },
+const minDate = computed(() => {
+  return new Date().toISOString().slice(0, 16)
+})
+
+// Options
+const priorities = [
+  { value: 'low', label: 'Низкий', icon: 'lucide:arrow-down' },
+  { value: 'medium', label: 'Средний', icon: 'lucide:minus' },
+  { value: 'high', label: 'Высокий', icon: 'lucide:arrow-up' },
+]
+
+const timeOptions = [
+  { value: 15, label: '15м' },
+  { value: 30, label: '30м' },
+  { value: 60, label: '1ч' },
+  { value: 120, label: '2ч' },
+  { value: 240, label: '4ч' },
+]
+
+const availableColors = [
+  '#5d5fef',
+  '#5df27e',
+  '#f87171',
+  '#facc15',
+  '#60a5fa',
+  '#a78bfa',
+  '#f472b6',
+  '#fb923c',
+]
+
+const availableIcons = [
+  'lucide:tag',
+  'lucide:star',
+  'lucide:heart',
+  'lucide:shopping-cart',
+  'lucide:utensils',
+  'lucide:car',
+  'lucide:home',
+  'lucide:briefcase',
+  'lucide:book',
+  'lucide:music',
+  'lucide:film',
+  'lucide:gamepad',
 ]
 
 // Methods
 const closeModal = () => {
-  isOpen.value = false
   resetForm()
   emit('close')
 }
 
 const resetForm = () => {
-  form.title = ''
-  form.description = ''
-  form.category = 'work'
-  form.priority = 'medium'
-  form.dueDate = ''
-  form.estimatedMinutes = undefined
-  form.tags = []
-  tagInput.value = ''
+  if (props.task) {
+    // Editing mode - reset to task data
+    Object.assign(formData, {
+      title: props.task.title,
+      description: props.task.description || '',
+      category: props.task.category,
+      priority: props.task.priority,
+      dueAt: props.task.dueAt
+        ? new Date(props.task.dueAt).toISOString().slice(0, 16)
+        : undefined,
+      estimatedMinutes: props.task.estimatedMinutes,
+      tags: [...props.task.tags],
+    })
+  } else {
+    // Create mode - reset to defaults
+    Object.assign(formData, {
+      title: '',
+      description: '',
+      category: 'personal',
+      priority: 'medium',
+      dueAt: undefined,
+      estimatedMinutes: undefined,
+      tags: [],
+    })
+  }
+  showDatePicker.value = false
+  newTag.value = ''
+}
+
+const saveTask = () => {
+  if (!canSave.value) return
+
+  const taskData = {
+    title: formData.title.trim(),
+    description: formData.description.trim() || undefined,
+    category: formData.category,
+    priority: formData.priority,
+    dueAt: formData.dueAt ? new Date(formData.dueAt) : undefined,
+    estimatedMinutes: formData.estimatedMinutes,
+    tags: formData.tags,
+    status: 'active' as const,
+  }
+
+  let savedTask: Task
+  if (isEditing.value && props.task) {
+    tasksStore.updateTask(props.task.id, taskData)
+    savedTask = { ...props.task, ...taskData }
+  } else {
+    savedTask = tasksStore.addTask(taskData)
+  }
+
+  emit('saved', savedTask)
+  closeModal()
+}
+
+const toggleDatePicker = () => {
+  showDatePicker.value = !showDatePicker.value
+}
+
+const clearDueDate = () => {
+  formData.dueAt = undefined
+  showDatePicker.value = false
 }
 
 const addTag = () => {
-  const tag = tagInput.value.trim()
-  if (tag && !form.tags.includes(tag) && form.tags.length < 5) {
-    form.tags.push(tag)
-    tagInput.value = ''
+  const tag = newTag.value.trim()
+  if (tag && !formData.tags.includes(tag)) {
+    formData.tags.push(tag)
+    newTag.value = ''
   }
 }
 
-const removeTag = (index: number) => {
-  form.tags.splice(index, 1)
+const removeTag = (tag: string) => {
+  formData.tags = formData.tags.filter((t) => t !== tag)
 }
 
-const handleBackspace = () => {
-  if (!tagInput.value && form.tags.length > 0) {
-    form.tags.pop()
+const handleBackspace = (event: KeyboardEvent) => {
+  if (newTag.value === '' && formData.tags.length > 0) {
+    formData.tags.pop()
   }
 }
 
-const submitTask = () => {
-  if (!isFormValid.value) return
+const createCustomCategory = () => {
+  if (!newCategory.name.trim()) return
 
-  const taskData = {
-    title: form.title.trim(),
-    description: form.description.trim() || undefined,
-    category: form.category,
-    priority: form.priority,
-    status: 'active' as const,
-    dueAt: form.dueDate ? new Date(form.dueDate) : undefined,
-    estimatedMinutes: form.estimatedMinutes,
-    tags: form.tags,
-    spentMinutes: 0,
-  }
+  const category = tasksStore.addCustomCategory(
+    newCategory.name.trim(),
+    newCategory.color,
+    newCategory.icon
+  )
 
-  tasksStore.addTask(taskData)
+  formData.category = category.id
+  showCategoryCreator.value = false
 
-  // Show success feedback
-  // TODO: Add toast notification
-
-  closeModal()
-  emit('created')
+  // Reset new category form
+  Object.assign(newCategory, {
+    name: '',
+    color: '#5d5fef',
+    icon: 'lucide:tag',
+  })
 }
 
-// Keyboard handlers
-onMounted(() => {
-  const handleEscape = (event: KeyboardEvent) => {
-    if (event.key === 'Escape' && isOpen.value) {
-      closeModal()
+const formatTimeSpent = (minutes: number) => {
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  if (hours > 0) {
+    return `${hours}ч ${mins}м`
+  }
+  return `${mins}м`
+}
+
+// Watch for task changes
+watch(
+  () => props.task,
+  (newTask) => {
+    if (newTask) {
+      resetForm()
+    }
+  },
+  { immediate: true }
+)
+
+// Initialize form when modal opens
+watch(
+  () => props.isOpen,
+  (isOpen) => {
+    if (isOpen) {
+      resetForm()
     }
   }
-
-  document.addEventListener('keydown', handleEscape)
-
-  onUnmounted(() => {
-    document.removeEventListener('keydown', handleEscape)
-  })
-})
+)
 </script>
 
 <style scoped lang="scss">
@@ -327,9 +513,7 @@ onMounted(() => {
   bottom: 0;
   z-index: var(--z-modal);
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-4);
+  flex-direction: column;
 }
 
 .modal-backdrop {
@@ -338,47 +522,96 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(8px);
-  animation: fadeIn 0.3s ease-out;
+  animation: backdropFadeIn 0.3s ease-out;
 }
 
-@keyframes fadeIn {
+@keyframes backdropFadeIn {
   from {
     opacity: 0;
+    backdrop-filter: blur(0px);
   }
   to {
     opacity: 1;
+    backdrop-filter: blur(8px);
   }
 }
 
 .modal-container {
   position: relative;
-  width: 100%;
-  max-width: 600px;
-  max-height: 90vh;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   background: var(--card-bg);
-  border-radius: var(--radius-card);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: var(--shadow-xl);
-  animation: slideUp 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  margin-top: auto;
+  border-radius: 24px 24px 0 0;
+  animation: slideUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   overflow: hidden;
+  max-height: 90vh;
+
+  &.small {
+    max-height: 70vh;
+    margin: auto;
+    border-radius: 24px;
+    max-width: 400px;
+    animation: scaleIn 0.3s ease-out;
+  }
+
+  @include breakpoint(md) {
+    max-width: 600px;
+    max-height: 80vh;
+    margin: auto;
+    border-radius: 24px;
+    animation: scaleIn 0.3s ease-out;
+  }
 }
 
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(20px) scale(0.95);
+    transform: translateY(100%);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }
 
 .modal-header {
-  padding: var(--space-5) var(--space-5) var(--space-4);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--card-bg);
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+  }
+
+  @include breakpoint(md) {
+    &::after {
+      display: none;
+    }
+  }
 }
 
 .header-content {
@@ -394,112 +627,105 @@ onMounted(() => {
   margin: 0;
 }
 
-.close-button {
+.cancel-button {
   @include button-reset;
-  @include flex-center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-button);
-  background: rgba(255, 255, 255, 0.05);
   color: var(--text-secondary);
-  transition: all var(--duration-base);
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  padding: var(--space-2);
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
     color: var(--text-primary);
   }
 }
 
-.form-content {
-  padding: var(--space-5);
-  overflow-y: auto;
-  max-height: calc(90vh - 100px);
+.save-button {
+  @include button-reset;
+  color: var(--accent-primary);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  padding: var(--space-2);
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:not(:disabled):hover {
+    color: var(--accent-secondary);
+  }
 }
 
-.task-form {
+.modal-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+
+.form-section {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
 }
 
-.form-group {
+.input-group {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-4);
-
-  @include breakpoint(sm) {
-    gap: var(--space-5);
-  }
-}
-
-.form-label {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+.input-label {
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
-
-  :deep(svg) {
-    color: var(--text-secondary);
-  }
 }
 
-.form-input,
-.form-textarea {
-  @include button-reset;
-  padding: var(--space-3) var(--space-4);
+.text-input {
   background: var(--surface-bg);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-card);
+  padding: var(--space-3) var(--space-4);
   color: var(--text-primary);
   font-size: var(--text-base);
   transition: all var(--duration-base);
-  resize: none;
 
   &:focus {
     outline: none;
     border-color: var(--accent-primary);
-    box-shadow: 0 0 0 2px rgba(93, 95, 239, 0.2);
+    box-shadow: 0 0 0 2px rgba(93, 95, 239, 0.1);
+  }
+
+  &.textarea {
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
   }
 
   &::placeholder {
-    color: var(--text-muted);
+    color: var(--text-secondary);
   }
 }
 
-.form-textarea {
-  line-height: var(--leading-relaxed);
-  min-height: 80px;
-}
-
-.char-counter {
+.input-counter {
   font-size: var(--text-xs);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-align: right;
 }
 
-// Category Grid
-.category-grid {
+// Category Selector
+.category-selector {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-3);
+  gap: var(--space-2);
 
   @include breakpoint(sm) {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
 .category-option {
   @include button-reset;
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3);
@@ -517,25 +743,40 @@ onMounted(() => {
     border-color: var(--accent-primary);
     background: rgba(93, 95, 239, 0.1);
   }
+
+  &.add-category {
+    border-style: dashed;
+    border-color: rgba(255, 255, 255, 0.3);
+
+    &:hover {
+      border-color: var(--accent-primary);
+    }
+  }
 }
 
-.category-icon {
-  @include flex-center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-card);
-  color: white;
-  font-weight: var(--font-semibold);
+.category-color {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+
+  &.add-color {
+    background: rgba(255, 255, 255, 0.1);
+    @include flex-center;
+    color: var(--text-secondary);
+  }
 }
 
 .category-name {
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--text-primary);
+  flex: 1;
+  text-align: left;
 }
 
-// Priority Options
-.priority-options {
+// Priority Selector
+.priority-selector {
   display: flex;
   gap: var(--space-2);
 }
@@ -546,12 +787,10 @@ onMounted(() => {
   align-items: center;
   gap: var(--space-2);
   flex: 1;
-  padding: var(--space-3) var(--space-3);
+  padding: var(--space-3);
   background: var(--surface-bg);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-card);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
   transition: all var(--duration-base);
 
   &:hover {
@@ -560,72 +799,78 @@ onMounted(() => {
 
   &.active {
     border-color: currentColor;
-    background: rgba(255, 255, 255, 0.05);
-  }
 
-  &.low {
-    color: var(--success);
-  }
+    &.low {
+      color: var(--success);
+      background: rgba(93, 242, 126, 0.1);
+    }
 
-  &.medium {
-    color: var(--warning);
-  }
+    &.medium {
+      color: var(--warning);
+      background: rgba(250, 204, 21, 0.1);
+    }
 
-  &.high {
-    color: var(--error);
+    &.high {
+      color: var(--error);
+      background: rgba(248, 113, 113, 0.1);
+    }
   }
 }
 
-// Tags Input
-.tags-input {
+// Date Selector
+.date-selector {
   display: flex;
-  flex-direction: column;
   gap: var(--space-2);
 }
 
-.tags-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.tag {
+.date-option {
+  @include button-reset;
   display: flex;
   align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  background: rgba(93, 95, 239, 0.1);
-  color: var(--accent-primary);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-}
-
-.tag-remove {
-  @include button-reset;
-  @include flex-center;
-  width: 16px;
-  height: 16px;
-  border-radius: var(--radius-sm);
-  color: inherit;
-  opacity: 0.7;
-  transition: all var(--duration-base);
-
-  &:hover {
-    opacity: 1;
-    background: rgba(255, 255, 255, 0.1);
-  }
-}
-
-.tag-input {
-  @include button-reset;
-  padding: var(--space-2) var(--space-3);
+  gap: var(--space-2);
+  flex: 1;
+  padding: var(--space-3);
   background: var(--surface-bg);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-card);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
   transition: all var(--duration-base);
+
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  &.active {
+    border-color: var(--accent-primary);
+    background: rgba(93, 95, 239, 0.1);
+  }
+}
+
+.clear-date {
+  @include button-reset;
+  @include flex-center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+  }
+}
+
+.date-picker {
+  margin-top: var(--space-2);
+}
+
+.date-input {
+  width: 100%;
+  background: var(--surface-bg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-card);
+  padding: var(--space-3);
+  color: var(--text-primary);
+  font-size: var(--text-base);
 
   &:focus {
     outline: none;
@@ -633,29 +878,196 @@ onMounted(() => {
   }
 }
 
-// Form Actions
-.form-actions {
+// Time Estimation
+.time-estimation {
   display: flex;
-  gap: var(--space-3);
-  justify-content: flex-end;
-  padding-top: var(--space-4);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
-.action-button {
+.time-option {
   @include button-reset;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-bg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-button);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  transition: all var(--duration-base);
+
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  &.active {
+    background: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+  }
+}
+
+.time-input {
+  flex: 1;
+  min-width: 100px;
+  background: var(--surface-bg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-button);
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+  }
+}
+
+// Tags Input
+.tags-input {
+  background: var(--surface-bg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-card);
+  padding: var(--space-2);
+  transition: all var(--duration-base);
+
+  &:focus-within {
+    border-color: var(--accent-primary);
+  }
+}
+
+.tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.tag {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: rgba(93, 95, 239, 0.1);
+  color: var(--accent-primary);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+}
+
+.tag-remove {
+  @include button-reset;
+  @include flex-center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  color: inherit;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
+.tag-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  padding: var(--space-1);
+
+  &:focus {
+    outline: none;
+  }
+
+  &::placeholder {
+    color: var(--text-secondary);
+  }
+}
+
+// Time Spent
+.time-spent {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-3);
+  background: var(--surface-bg);
+  border-radius: var(--radius-card);
+  color: var(--text-primary);
+  font-weight: var(--font-medium);
+}
+
+// Category Creator
+.category-creator-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: calc(var(--z-modal) + 10);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.color-picker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+.color-option {
+  @include button-reset;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  transition: all var(--duration-base);
+
+  &.active {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 3px white, 0 0 0 5px currentColor;
+  }
+}
+
+.icon-picker {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--space-2);
+}
+
+.icon-option {
+  @include button-reset;
+  @include flex-center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-button);
+  background: var(--surface-bg);
+  color: var(--text-secondary);
+  transition: all var(--duration-base);
+
+  &.active {
+    background: var(--accent-primary);
+    color: white;
+  }
+
+  &:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.modal-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.button {
+  @include button-reset;
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-button);
   font-weight: var(--font-semibold);
   transition: all var(--duration-base);
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
 
   &.primary {
     background: var(--accent-primary);
@@ -663,83 +1075,69 @@ onMounted(() => {
 
     &:hover:not(:disabled) {
       background: var(--accent-secondary);
-      transform: translateY(-1px);
-      box-shadow: var(--glow-primary);
     }
   }
 
   &.secondary {
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text-secondary);
+    background: var(--surface-bg);
+    color: var(--text-primary);
 
-    &:hover:not(:disabled) {
+    &:hover {
       background: rgba(255, 255, 255, 0.1);
-      color: var(--text-primary);
     }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 }
 
 // Light theme adjustments
 [data-theme='light'] {
-  .modal-container {
-    background: var(--card-bg);
-    border: 1px solid rgba(0, 0, 0, 0.05);
-  }
-
-  .modal-header {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  }
-
-  .form-input,
-  .form-textarea,
-  .tag-input {
-    background: var(--surface-bg);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-  }
-
+  .text-input,
   .category-option,
-  .priority-option {
+  .priority-option,
+  .date-option,
+  .time-option,
+  .time-input,
+  .tags-input,
+  .time-spent {
     background: var(--surface-bg);
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.1);
   }
 
-  .action-button.secondary {
-    background: rgba(0, 0, 0, 0.05);
+  .color-option.active {
+    box-shadow: 0 0 0 3px white, 0 0 0 5px currentColor;
   }
 }
 
 // Mobile optimizations
-@include breakpoint(sm) {
-  .modal-container {
-    max-height: 80vh;
-  }
-
-  .form-content {
-    padding: var(--space-4);
-  }
-}
-
 @include breakpoint(xs) {
-  .create-task-modal {
-    padding: 0;
-  }
-
   .modal-container {
     border-radius: 0;
-    max-height: 100vh;
-    height: 100vh;
+    max-height: none;
+    margin-top: 0;
   }
 
-  .form-row {
+  .modal-header {
+    padding-top: calc(var(--space-4) + env(safe-area-inset-top));
+
+    &::after {
+      display: block;
+    }
+  }
+
+  .modal-content {
+    padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+  }
+
+  .category-selector {
     grid-template-columns: 1fr;
   }
 
-  .category-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .form-actions {
-    flex-direction: column-reverse;
+  .priority-selector {
+    flex-direction: column;
   }
 }
 </style>
