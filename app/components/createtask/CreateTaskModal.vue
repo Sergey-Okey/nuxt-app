@@ -199,8 +199,6 @@
 </template>
 
 <script setup lang="ts">
-import { Task, Category } from '~/stores/tasks'
-
 const tasksStore = useTasksStore()
 
 // Props
