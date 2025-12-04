@@ -11,8 +11,7 @@ export default defineNuxtConfig({
     '@nuxt/image',
   ],
 
-  css: ['~/assets/scss/main.scss'],
-
+  css: ['~/assets/scss/main.scss', 'v-calendar/style.css'],
   googleFonts: {
     families: {
       Montserrat: [300, 400, 500, 600, 700],
