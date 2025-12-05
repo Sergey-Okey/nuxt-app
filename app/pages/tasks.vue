@@ -1,187 +1,355 @@
 <template>
   <div class="tasks-page">
-    <!-- Header -->
+    <!-- Page Header -->
     <div class="page-header">
-      <div class="header-content">
-        <h1 class="page-title">Задачи</h1>
-        <div class="header-actions">
-          <button class="category-manager-button" @click="showCategoryManager">
-            <Icon name="lucide:folder-plus" size="20" />
-            <span>Категории</span>
-          </button>
-          <button class="add-button" @click="openTaskForm">
-            <Icon name="lucide:plus" size="20" />
-            <span>Новая задача</span>
-          </button>
-        </div>
+      <h1 class="page-title">Задачи</h1>
+      <button class="search-button" @click="toggleSearch">
+        <Icon name="lucide:search" size="20" />
+      </button>
+    </div>
+
+    <!-- Search Bar -->
+    <div v-if="showSearch" class="search-bar">
+      <div class="search-input">
+        <Icon name="lucide:search" size="18" />
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Поиск задач..."
+          @input="handleSearch"
+        />
+        <button class="clear-search" @click="clearSearch" v-if="searchQuery">
+          <Icon name="lucide:x" size="16" />
+        </button>
       </div>
     </div>
 
-    <!-- Основной контент -->
-    <main class="page-content">
-      <TaskList
-        ref="taskListRef"
-        @add-task="openTaskForm"
-        @edit-task="editTask"
-      />
-    </main>
+    <!-- Filters -->
+    <TaskFilters />
 
-    <!-- Модальные окна -->
-    <TaskForm
-      :is-open="isTaskFormOpen"
+    <!-- Tasks List -->
+    <div class="tasks-container">
+      <div v-if="filteredTasks.length > 0" class="tasks-list">
+        <TaskItem
+          v-for="task in filteredTasks"
+          :key="task.id"
+          :task="task"
+          @toggle="toggleTaskStatus"
+          @edit="openEditModal"
+          @delete="deleteTask"
+          @start-timer="startTaskTimer"
+        />
+      </div>
+
+      <!-- Empty State -->
+      <div v-else class="empty-state">
+        <div class="empty-icon">
+          <Icon name="lucide:check-square" size="48" />
+        </div>
+        <h3>{{ searchQuery ? 'Задачи не найдены' : 'Нет задач' }}</h3>
+        <p v-if="!searchQuery">Создайте свою первую задачу</p>
+        <button class="create-button" @click="openCreateModal">
+          <Icon name="lucide:plus" size="16" />
+          <span>Создать задачу</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Task Stats -->
+    <div v-if="filteredTasks.length > 0" class="task-stats">
+      <div class="stat-item">
+        <div class="stat-value">{{ activeCount }}</div>
+        <div class="stat-label">Активных</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">{{ completedCount }}</div>
+        <div class="stat-label">Выполненных</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">{{ totalTime }}</div>
+        <div class="stat-label">Потрачено времени</div>
+      </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button class="fab-button" @click="openCreateModal">
+      <Icon name="lucide:plus" size="20" />
+    </button>
+
+    <!-- Task Modal -->
+    <TaskModal
+      :is-open="showModal"
       :task="editingTask"
-      @close="closeTaskForm"
+      @close="closeModal"
       @submit="handleTaskSubmit"
     />
-
-    <CategoryManager
-      :is-open="isCategoryManagerOpen"
-      @close="closeCategoryManager"
-    />
-
-    <!-- FAB для мобильных -->
-    <button class="fab-button" @click="openTaskForm">
-      <Icon name="lucide:plus" size="24" />
-    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import TaskList from '~/components/Tasks/TaskList.vue'
-import TaskForm from '~/components/Tasks/TaskForm.vue'
-import CategoryManager from '~/components/Tasks/CategoryManager.vue'
+import TaskFilters from '~/components/Tasks/TaskFilters.vue'
+import TaskItem from '~/components/Tasks/TaskItem.vue'
+import TaskModal from '~/components/Tasks/TaskModal.vue'
+import type { Task } from '~/stores/tasks'
 
 const tasksStore = useTasksStore()
+const router = useRouter()
 
-// Состояние модальных окон
-const isTaskFormOpen = ref(false)
-const isCategoryManagerOpen = ref(false)
-const editingTask = ref<Task | null>(null)
-const taskListRef = ref()
-
-// Инициализация хранилища
+// Инициализируем хранилище
 onMounted(() => {
   tasksStore.initialize()
 })
 
-// Методы для форм
-const openTaskForm = () => {
-  editingTask.value = null
-  isTaskFormOpen.value = true
+// Local state
+const showSearch = ref(false)
+const searchQuery = ref('')
+const showModal = ref(false)
+const editingTask = ref<Task | null>(null)
+
+// Computed
+const filteredTasks = computed(() => {
+  let tasks = tasksStore.filteredTasks
+
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    tasks = tasks.filter(
+      (task) =>
+        task.title.toLowerCase().includes(query) ||
+        (task.description && task.description.toLowerCase().includes(query)) ||
+        task.tags.some((tag) => tag.toLowerCase().includes(query))
+    )
+  }
+
+  return tasks
+})
+
+const activeCount = computed(
+  () => filteredTasks.value.filter((task) => task.status === 'active').length
+)
+
+const completedCount = computed(
+  () => filteredTasks.value.filter((task) => task.status === 'completed').length
+)
+
+const totalTime = computed(() => {
+  const totalMinutes = filteredTasks.value.reduce(
+    (total, task) => total + (task.spentMinutes || 0),
+    0
+  )
+
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+
+  if (hours > 0) {
+    return `${hours}ч ${minutes}м`
+  }
+  return `${minutes}м`
+})
+
+// Methods
+const toggleSearch = () => {
+  showSearch.value = !showSearch.value
+  if (!showSearch.value) {
+    clearSearch()
+  }
 }
 
-const closeTaskForm = () => {
-  isTaskFormOpen.value = false
-  editingTask.value = null
+const handleSearch = useDebounce(() => {
+  // Поиск уже работает через computed
+}, 300)
+
+const clearSearch = () => {
+  searchQuery.value = ''
 }
 
-const editTask = (task: Task) => {
+const toggleTaskStatus = (taskId: string) => {
+  tasksStore.toggleTaskStatus(taskId)
+}
+
+const openCreateModal = () => {
+  editingTask.value = null
+  showModal.value = true
+}
+
+const openEditModal = (task: Task) => {
   editingTask.value = task
-  isTaskFormOpen.value = true
+  showModal.value = true
+}
+
+const closeModal = () => {
+  showModal.value = false
+  editingTask.value = null
 }
 
 const handleTaskSubmit = (taskData: any) => {
   if (editingTask.value) {
-    // Обновление задачи
+    // Обновляем существующую задачу
     tasksStore.updateTask(editingTask.value.id, taskData)
   } else {
-    // Создание новой задачи
+    // Создаем новую задачу
     tasksStore.addTask(taskData)
+  }
+  closeModal()
+}
+
+const deleteTask = (taskId: string) => {
+  if (confirm('Удалить эту задачу?')) {
+    tasksStore.deleteTask(taskId)
   }
 }
 
-// Управление категориями
-const showCategoryManager = () => {
-  isCategoryManagerOpen.value = true
-}
-
-const closeCategoryManager = () => {
-  isCategoryManagerOpen.value = false
+const startTaskTimer = (task: Task) => {
+  // TODO: Сохраняем текущую задачу для таймера
+  router.push('/timer')
 }
 </script>
 
 <style scoped lang="scss">
 .tasks-page {
-  min-height: 100vh;
-  background: var(--primary-bg);
+  padding: var(--space-4);
+  padding-bottom: 100px;
 }
 
 .page-header {
-  padding: var(--space-4) var(--space-4) var(--space-2);
-  background: var(--card-bg);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-
-  @include breakpoint(md) {
-    padding: var(--space-6) var(--space-6) var(--space-4);
-  }
-}
-
-.header-content {
-  max-width: 1200px;
-  margin: 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 .page-title {
   font-size: var(--text-2xl);
   font-weight: var(--font-bold);
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text-primary);
   margin: 0;
-
-  @include breakpoint(md) {
-    font-size: var(--text-3xl);
-  }
 }
 
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.category-manager-button {
+.search-button {
   @include button-reset;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  @include flex-center;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-button);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text-secondary);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
   transition: all var(--duration-base);
 
   &:hover {
     background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.1);
     color: var(--text-primary);
   }
+}
 
-  @include breakpoint(xs) {
-    span {
-      display: none;
+.search-bar {
+  margin-bottom: var(--space-4);
+  animation: slideDown 0.2s ease-out;
+}
+
+.search-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  :deep(svg) {
+    position: absolute;
+    left: var(--space-4);
+    color: var(--text-secondary);
+  }
+
+  input {
+    @include button-reset;
+    width: 100%;
+    padding: var(--space-3) var(--space-4) var(--space-3) 44px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-button);
+    color: var(--text-primary);
+    font-family: var(--font-family-primary);
+    font-size: var(--text-base);
+    transition: all var(--duration-base);
+
+    &:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+      background: rgba(93, 95, 239, 0.05);
+    }
+
+    &::placeholder {
+      color: var(--text-secondary);
+    }
+  }
+
+  .clear-search {
+    @include button-reset;
+    @include flex-center;
+    position: absolute;
+    right: var(--space-3);
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    transition: all var(--duration-base);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
     }
   }
 }
 
-.add-button {
+.tasks-container {
+  min-height: 200px;
+}
+
+.tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.empty-state {
+  @include flex-center;
+  flex-direction: column;
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+}
+
+.empty-icon {
+  @include flex-center;
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.05);
+  margin-bottom: var(--space-4);
+
+  :deep(svg) {
+    color: var(--text-secondary);
+    opacity: 0.5;
+  }
+}
+
+.empty-state h3 {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.empty-state p {
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.create-button {
   @include button-reset;
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
   background: var(--accent-primary);
   color: white;
   border-radius: var(--radius-button);
-  font-size: var(--text-sm);
   font-weight: var(--font-medium);
   transition: all var(--duration-base);
 
@@ -190,65 +358,86 @@ const closeCategoryManager = () => {
     transform: translateY(-1px);
     box-shadow: var(--glow-primary);
   }
-
-  @include breakpoint(xs) {
-    span {
-      display: none;
-    }
-  }
 }
 
-.page-content {
+.task-stats {
+  @include card;
+  display: flex;
+  justify-content: space-around;
   padding: var(--space-4);
-  max-width: 1200px;
-  margin: 0 auto;
+  margin-top: var(--space-6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
 
-  @include breakpoint(md) {
-    padding: var(--space-6);
-  }
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.stat-value {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  color: var(--accent-primary);
+}
+
+.stat-label {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  font-weight: var(--font-medium);
+  text-align: center;
 }
 
 .fab-button {
-  @include button-reset;
-  @include flex-center;
   position: fixed;
-  bottom: calc(var(--space-4) + 80px);
+  bottom: calc(80px + var(--space-4));
   right: var(--space-4);
   width: 56px;
   height: 56px;
+  border-radius: var(--radius-full);
   background: var(--accent-primary);
   color: white;
-  border-radius: var(--radius-full);
+  border: none;
   box-shadow: var(--shadow-lg);
+  cursor: pointer;
   transition: all var(--duration-base);
+  @include flex-center;
   z-index: var(--z-fixed);
 
   &:hover {
     background: var(--accent-secondary);
-    transform: scale(1.1);
-    box-shadow: var(--shadow-xl);
+    transform: scale(1.1) rotate(90deg);
+    box-shadow: var(--glow-primary);
   }
 
-  @include breakpoint(md) {
-    display: none;
+  &:active {
+    transform: scale(0.95) rotate(90deg);
   }
 }
 
-// Light theme adjustments
-[data-theme='light'] {
-  .page-header {
-    background: var(--card-bg);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
   }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
-  .category-manager-button {
-    background: rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.05);
+// Responsive adjustments
+@include breakpoint(sm) {
+  .tasks-page {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
 
-    &:hover {
-      background: rgba(0, 0, 0, 0.1);
-      border-color: rgba(0, 0, 0, 0.1);
-    }
+@include breakpoint(md) {
+  .tasks-page {
+    max-width: 800px;
   }
 }
 </style>

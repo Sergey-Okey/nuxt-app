@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { v4 as uuidv4 } from 'uuid'
 
 export interface Task {
   id: string
@@ -11,7 +10,7 @@ export interface Task {
   createdAt: Date
   dueAt?: Date
   estimatedMinutes?: number
-  spentMinutes: number
+  spentMinutes?: number
   tags: string[]
 }
 
@@ -20,59 +19,17 @@ export interface Category {
   name: string
   color: string
   icon: string
-  isCustom: boolean
-  taskCount: number
+  isCustom?: boolean
 }
 
 export const useTasksStore = defineStore('tasks', {
   state: () => ({
     tasks: [] as Task[],
-    categories: [
-      {
-        id: 'work',
-        name: 'Работа',
-        color: '#5d5fef',
-        icon: 'lucide:briefcase',
-        isCustom: false,
-        taskCount: 0,
-      },
-      {
-        id: 'personal',
-        name: 'Личное',
-        color: '#5df27e',
-        icon: 'lucide:home',
-        isCustom: false,
-        taskCount: 0,
-      },
-      {
-        id: 'health',
-        name: 'Здоровье',
-        color: '#f87171',
-        icon: 'lucide:heart',
-        isCustom: false,
-        taskCount: 0,
-      },
-      {
-        id: 'learning',
-        name: 'Обучение',
-        color: '#facc15',
-        icon: 'lucide:book-open',
-        isCustom: false,
-        taskCount: 0,
-      },
-      {
-        id: 'uncategorized',
-        name: 'Без категории',
-        color: '#a0a0a0',
-        icon: 'lucide:folder',
-        isCustom: false,
-        taskCount: 0,
-      },
-    ] as Category[],
-    activeTimer: {
-      taskId: null as string | null,
-      startTime: null as Date | null,
-      elapsedSeconds: 0,
+    categories: [] as Category[],
+    filters: {
+      status: 'all' as 'all' | 'active' | 'completed',
+      category: 'all' as string,
+      priority: 'all' as 'all' | 'low' | 'medium' | 'high',
     },
   }),
 
@@ -82,9 +39,11 @@ export const useTasksStore = defineStore('tasks', {
     completedTasks: (state) =>
       state.tasks.filter((task) => task.status === 'completed'),
     todayTasks: (state) => {
-      const today = new Date().toDateString()
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
       return state.tasks.filter(
-        (task) => new Date(task.createdAt).toDateString() === today
+        (task) =>
+          new Date(task.createdAt).toDateString() === today.toDateString()
       )
     },
     upcomingTasks: (state) => {
@@ -102,41 +61,62 @@ export const useTasksStore = defineStore('tasks', {
           (a, b) => new Date(a.dueAt!).getTime() - new Date(b.dueAt!).getTime()
         )
     },
-    tasksByCategory: (state) => {
-      return (categoryId: string) =>
-        state.tasks.filter((task) => task.category === categoryId)
-    },
-    customCategories: (state) => state.categories.filter((cat) => cat.isCustom),
-    getTaskById: (state) => (id: string) =>
-      state.tasks.find((task) => task.id === id),
+    filteredTasks: (state) => {
+      return state.tasks
+        .filter((task) => {
+          // Фильтр по статусу
+          if (
+            state.filters.status !== 'all' &&
+            task.status !== state.filters.status
+          ) {
+            return false
+          }
 
-    // Для статистики по категориям
-    categoryStats: (state) => {
-      const stats = new Map<
-        string,
-        { total: number; active: number; completed: number }
-      >()
+          // Фильтр по категории
+          if (
+            state.filters.category !== 'all' &&
+            task.category !== state.filters.category
+          ) {
+            return false
+          }
 
-      state.categories.forEach((category) => {
-        const tasks = state.tasks.filter(
-          (task) => task.category === category.id
-        )
-        stats.set(category.id, {
-          total: tasks.length,
-          active: tasks.filter((t) => t.status === 'active').length,
-          completed: tasks.filter((t) => t.status === 'completed').length,
+          // Фильтр по приоритету
+          if (
+            state.filters.priority !== 'all' &&
+            task.priority !== state.filters.priority
+          ) {
+            return false
+          }
+
+          return true
         })
-      })
+        .sort((a, b) => {
+          // Сначала активные, затем завершенные
+          if (a.status === 'active' && b.status === 'completed') return -1
+          if (a.status === 'completed' && b.status === 'active') return 1
 
-      return stats
+          // Затем по приоритету (high -> medium -> low)
+          const priorityOrder = { high: 3, medium: 2, low: 1 }
+          if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+            return priorityOrder[b.priority] - priorityOrder[a.priority]
+          }
+
+          // Затем по дате создания (новые сверху)
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )
+        })
     },
+    userCategories: (state) => state.categories.filter((cat) => cat.isCustom),
+    defaultCategories: (state) =>
+      state.categories.filter((cat) => !cat.isCustom),
   },
 
   actions: {
     // Инициализация из localStorage
     initialize() {
       if (process.client) {
-        // Загрузка задач
+        // Загружаем задачи
         const savedTasks = localStorage.getItem('taskflow-tasks')
         if (savedTasks) {
           try {
@@ -145,47 +125,22 @@ export const useTasksStore = defineStore('tasks', {
               ...task,
               createdAt: new Date(task.createdAt),
               dueAt: task.dueAt ? new Date(task.dueAt) : undefined,
-              spentMinutes: task.spentMinutes || 0,
             }))
           } catch (error) {
             console.error('Error loading tasks from localStorage:', error)
           }
         }
 
-        // Загрузка категорий
+        // Загружаем пользовательские категории
         const savedCategories = localStorage.getItem('taskflow-categories')
         if (savedCategories) {
           try {
-            const parsed = JSON.parse(savedCategories)
-            this.categories = parsed
+            const customCategories = JSON.parse(savedCategories)
+            this.categories = [...this.categories, ...customCategories]
           } catch (error) {
             console.error('Error loading categories from localStorage:', error)
           }
         }
-
-        // Загрузка активного таймера
-        const savedTimer = localStorage.getItem('taskflow-active-timer')
-        if (savedTimer) {
-          try {
-            const parsed = JSON.parse(savedTimer)
-            if (parsed.taskId && parsed.startTime) {
-              const now = new Date()
-              const startTime = new Date(parsed.startTime)
-              this.activeTimer = {
-                taskId: parsed.taskId,
-                startTime: startTime,
-                elapsedSeconds: Math.floor(
-                  (now.getTime() - startTime.getTime()) / 1000
-                ),
-              }
-            }
-          } catch (error) {
-            console.error('Error loading timer from localStorage:', error)
-          }
-        }
-
-        // Обновляем счетчики задач в категориях
-        this.updateCategoryCounts()
       }
     },
 
@@ -195,74 +150,58 @@ export const useTasksStore = defineStore('tasks', {
         localStorage.setItem('taskflow-tasks', JSON.stringify(this.tasks))
         localStorage.setItem(
           'taskflow-categories',
-          JSON.stringify(this.categories)
+          JSON.stringify(this.userCategories)
         )
-
-        if (this.activeTimer.taskId && this.activeTimer.startTime) {
-          localStorage.setItem(
-            'taskflow-active-timer',
-            JSON.stringify({
-              taskId: this.activeTimer.taskId,
-              startTime: this.activeTimer.startTime.toISOString(),
-            })
-          )
-        } else {
-          localStorage.removeItem('taskflow-active-timer')
-        }
       }
     },
 
-    // Обновление счетчиков задач в категориях
-    updateCategoryCounts() {
-      this.categories.forEach((category) => {
-        category.taskCount = this.tasks.filter(
-          (task) => task.category === category.id
-        ).length
-      })
+    // Управление фильтрами
+    setFilter(type: 'status' | 'category' | 'priority', value: string) {
+      this.filters[type] = value as any
     },
 
-    // Добавление задачи
-    addTask(taskData: Omit<Task, 'id' | 'createdAt' | 'spentMinutes'>) {
+    resetFilters() {
+      this.filters = {
+        status: 'all',
+        category: 'all',
+        priority: 'all',
+      }
+    },
+
+    // Управление задачами
+    addTask(task: Omit<Task, 'id' | 'createdAt'>) {
       const newTask: Task = {
-        ...taskData,
-        id: uuidv4(),
+        ...task,
+        id: Date.now().toString(),
         createdAt: new Date(),
         spentMinutes: 0,
       }
       this.tasks.unshift(newTask)
-      this.updateCategoryCounts()
       this.saveToLocalStorage()
       return newTask
     },
 
-    // Обновление задачи
     updateTask(id: string, updates: Partial<Task>) {
       const index = this.tasks.findIndex((task) => task.id === id)
       if (index !== -1) {
         this.tasks[index] = { ...this.tasks[index], ...updates }
-        this.updateCategoryCounts()
         this.saveToLocalStorage()
       }
     },
 
-    // Удаление задачи
     deleteTask(id: string) {
       this.tasks = this.tasks.filter((task) => task.id !== id)
-      this.updateCategoryCounts()
       this.saveToLocalStorage()
     },
 
-    // Переключение статуса задачи
     toggleTaskStatus(id: string) {
       const task = this.tasks.find((t) => t.id === id)
       if (task) {
         task.status = task.status === 'active' ? 'completed' : 'active'
-        this.updateCategoryCounts()
         this.saveToLocalStorage()
       }
     },
 
-    // Добавление времени к задаче
     addTimeToTask(id: string, minutes: number) {
       const task = this.tasks.find((t) => t.id === id)
       if (task) {
@@ -271,90 +210,14 @@ export const useTasksStore = defineStore('tasks', {
       }
     },
 
-    // Таймер для задачи
-    startTimer(taskId: string) {
-      // Если уже есть активный таймер, останавливаем его
-      if (this.activeTimer.taskId && this.activeTimer.startTime) {
-        const elapsedMinutes = Math.floor(this.activeTimer.elapsedSeconds / 60)
-        this.addTimeToTask(this.activeTimer.taskId, elapsedMinutes)
-      }
-
-      this.activeTimer = {
-        taskId,
-        startTime: new Date(),
-        elapsedSeconds: 0,
-      }
-      this.saveToLocalStorage()
-    },
-
-    stopTimer() {
-      if (this.activeTimer.taskId && this.activeTimer.startTime) {
-        const elapsedMinutes = Math.floor(this.activeTimer.elapsedSeconds / 60)
-        this.addTimeToTask(this.activeTimer.taskId, elapsedMinutes)
-
-        this.activeTimer = {
-          taskId: null,
-          startTime: null,
-          elapsedSeconds: 0,
-        }
-        this.saveToLocalStorage()
-      }
-    },
-
-    pauseTimer() {
-      if (this.activeTimer.taskId && this.activeTimer.startTime) {
-        const now = new Date()
-        this.activeTimer.elapsedSeconds += Math.floor(
-          (now.getTime() - this.activeTimer.startTime.getTime()) / 1000
-        )
-        this.activeTimer.startTime = null
-        this.saveToLocalStorage()
-      }
-    },
-
-    resumeTimer() {
-      if (this.activeTimer.taskId && !this.activeTimer.startTime) {
-        this.activeTimer.startTime = new Date()
-        this.saveToLocalStorage()
-      }
-    },
-
-    // Обновление прошедшего времени (вызывается каждую секунду)
-    updateTimer() {
-      if (this.activeTimer.taskId && this.activeTimer.startTime) {
-        const now = new Date()
-        this.activeTimer.elapsedSeconds = Math.floor(
-          (now.getTime() - this.activeTimer.startTime.getTime()) / 1000
-        )
-      }
-    },
-
-    // Получение отформатированного времени таймера
-    getTimerDisplay() {
-      if (!this.activeTimer.taskId) return '00:00'
-
-      const totalSeconds = this.activeTimer.elapsedSeconds
-      const hours = Math.floor(totalSeconds / 3600)
-      const minutes = Math.floor((totalSeconds % 3600) / 60)
-      const seconds = totalSeconds % 60
-
-      if (hours > 0) {
-        return `${hours.toString().padStart(2, '0')}:${minutes
-          .toString()
-          .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-      }
-      return `${minutes.toString().padStart(2, '0')}:${seconds
-        .toString()
-        .padStart(2, '0')}`
-    },
-
-    // Работа с категориями
-    addCategory(category: Omit<Category, 'id' | 'isCustom' | 'taskCount'>) {
+    // Управление категориями
+    addCategory(name: string, color: string, icon: string) {
       const newCategory: Category = {
-        ...category,
-        id: uuidv4(),
+        id: `custom-${Date.now()}`,
+        name,
+        color,
+        icon,
         isCustom: true,
-        taskCount: 0,
       }
       this.categories.push(newCategory)
       this.saveToLocalStorage()
@@ -370,18 +233,16 @@ export const useTasksStore = defineStore('tasks', {
     },
 
     deleteCategory(id: string) {
-      // Нельзя удалить системные категории
+      // Не удаляем системные категории
       const category = this.categories.find((cat) => cat.id === id)
-      if (category && category.isCustom) {
-        // Переносим задачи в "Без категории"
-        this.tasks.forEach((task) => {
-          if (task.category === id) {
-            task.category = 'uncategorized'
-          }
-        })
-
+      if (category?.isCustom) {
         this.categories = this.categories.filter((cat) => cat.id !== id)
-        this.updateCategoryCounts()
+
+        // Удаляем категорию из задач
+        this.tasks = this.tasks.map((task) =>
+          task.category === id ? { ...task, category: 'personal' } : task
+        )
+
         this.saveToLocalStorage()
       }
     },
@@ -389,40 +250,6 @@ export const useTasksStore = defineStore('tasks', {
     // Получение категории по ID
     getCategoryById(id: string): Category | undefined {
       return this.categories.find((cat) => cat.id === id)
-    },
-
-    // Фильтрация задач
-    getFilteredTasks(filters: {
-      category?: string
-      priority?: string
-      status?: string
-      search?: string
-    }) {
-      let filtered = this.tasks
-
-      if (filters.category && filters.category !== 'all') {
-        filtered = filtered.filter((task) => task.category === filters.category)
-      }
-
-      if (filters.priority && filters.priority !== 'all') {
-        filtered = filtered.filter((task) => task.priority === filters.priority)
-      }
-
-      if (filters.status && filters.status !== 'all') {
-        filtered = filtered.filter((task) => task.status === filters.status)
-      }
-
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase()
-        filtered = filtered.filter(
-          (task) =>
-            task.title.toLowerCase().includes(searchLower) ||
-            task.description?.toLowerCase().includes(searchLower) ||
-            task.tags.some((tag) => tag.toLowerCase().includes(searchLower))
-        )
-      }
-
-      return filtered
     },
   },
 })

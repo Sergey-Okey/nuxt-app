@@ -2,183 +2,153 @@
   <div
     class="task-item"
     :class="{
-      'task-completed': task.status === 'completed',
-      'task-high': task.priority === 'high',
-      'task-medium': task.priority === 'medium',
-      'task-low': task.priority === 'low',
-      'task-timer-active': isTimerActive,
+      completed: task.status === 'completed',
+      [`priority-${task.priority}`]: true,
+      dragging: isDragging,
     }"
-    @click="$emit('toggle')"
+    @click="toggleTaskStatus"
+    @contextmenu.prevent="openContextMenu"
   >
-    <!-- Основной контент -->
+    <!-- Drag Handle -->
+    <button
+      class="drag-handle"
+      @mousedown="startDrag"
+      @touchstart="startDrag"
+      @click.stop
+    >
+      <Icon name="lucide:grip-vertical" size="16" />
+    </button>
+
+    <!-- Checkbox -->
+    <div class="task-checkbox" @click.stop="toggleTaskStatus">
+      <Icon
+        :name="
+          task.status === 'completed' ? 'lucide:check-circle' : 'lucide:circle'
+        "
+        size="20"
+      />
+    </div>
+
+    <!-- Task Content -->
     <div class="task-content">
-      <!-- Чекбокс -->
-      <div class="task-checkbox" @click.stop="$emit('toggle')">
-        <Icon
-          :name="
-            task.status === 'completed'
-              ? 'lucide:check-circle'
-              : 'lucide:circle'
-          "
-          size="20"
-        />
+      <div class="task-header">
+        <h4 class="task-title">{{ task.title }}</h4>
+        <div class="task-priority" :class="`priority-${task.priority}`">
+          {{ priorityLabel }}
+        </div>
       </div>
 
-      <!-- Информация о задаче -->
-      <div class="task-info">
-        <div class="task-header">
-          <h4 class="task-title">{{ task.title }}</h4>
-          <div class="task-priority" :class="`priority-${task.priority}`">
-            <Icon :name="priorityIcon" size="12" />
-          </div>
+      <div class="task-meta">
+        <!-- Category -->
+        <div class="task-category" :style="{ color: category?.color }">
+          <Icon :name="category?.icon || 'lucide:tag'" size="12" />
+          <span>{{ category?.name || 'Без категории' }}</span>
         </div>
 
-        <p v-if="task.description" class="task-description">
-          {{ task.description }}
-        </p>
-
-        <div class="task-meta">
-          <!-- Категория -->
-          <span
-            class="task-category"
-            :style="{ '--category-color': categoryColor }"
-          >
-            <Icon :name="categoryIcon" size="12" />
-            {{ categoryName }}
-          </span>
-
-          <!-- Время -->
-          <span v-if="task.spentMinutes > 0" class="task-time">
-            <Icon name="lucide:clock" size="12" />
-            {{ formatTime(task.spentMinutes) }}
-          </span>
-
-          <!-- Дедлайн -->
-          <span
-            v-if="task.dueAt"
-            class="task-deadline"
-            :class="{ 'task-overdue': isOverdue }"
-          >
-            <Icon name="lucide:calendar" size="12" />
-            {{ formatDate(task.dueAt) }}
-          </span>
+        <!-- Time Spent -->
+        <div
+          v-if="task.spentMinutes && task.spentMinutes > 0"
+          class="task-time"
+        >
+          <Icon name="lucide:clock" size="12" />
+          <span>{{ formatTimeSpent(task.spentMinutes) }}</span>
         </div>
 
-        <!-- Тэги -->
-        <div v-if="task.tags.length > 0" class="task-tags">
-          <span v-for="tag in task.tags" :key="tag" class="task-tag">
-            {{ tag }}
-          </span>
+        <!-- Due Date -->
+        <div v-if="task.dueAt" class="task-due">
+          <Icon name="lucide:calendar" size="12" />
+          <span>{{ formatDueDate(task.dueAt) }}</span>
         </div>
       </div>
     </div>
 
-    <!-- Действия -->
-    <div class="task-actions" @click.stop>
-      <!-- Таймер -->
-      <div class="timer-section" v-if="!isTimerActive">
-        <button
-          class="timer-button"
-          @click="$emit('timer-start')"
-          :title="`Затрачено: ${formatTime(task.spentMinutes)}`"
-        >
-          <Icon name="lucide:play" size="16" />
-        </button>
-        <span class="timer-display">{{ formatTime(task.spentMinutes) }}</span>
-      </div>
+    <!-- Quick Actions -->
+    <div class="task-actions">
+      <button
+        class="action-button start-timer"
+        @click.stop="startTimer"
+        title="Запустить таймер"
+      >
+        <Icon name="lucide:play" size="16" />
+      </button>
 
-      <!-- Активный таймер -->
-      <div class="timer-section active" v-else>
-        <div class="active-timer">
-          <div class="timer-pulse"></div>
-          <span class="timer-display">{{ timerDisplay }}</span>
-        </div>
-        <div class="timer-controls">
-          <button class="timer-control" @click="$emit('timer-pause')">
-            <Icon name="lucide:pause" size="14" />
-          </button>
-          <button class="timer-control stop" @click="$emit('timer-stop')">
-            <Icon name="lucide:square" size="14" />
-          </button>
-        </div>
-      </div>
+      <button
+        class="action-button more-actions"
+        @click.stop="toggleActionsMenu"
+        title="Другие действия"
+      >
+        <Icon name="lucide:more-vertical" size="16" />
+      </button>
+    </div>
 
-      <!-- Другие действия -->
-      <div class="action-buttons">
-        <button class="action-button" @click="$emit('edit')">
-          <Icon name="lucide:edit-2" size="16" />
-        </button>
-        <button class="action-button delete" @click="$emit('delete')">
-          <Icon name="lucide:trash-2" size="16" />
-        </button>
-      </div>
+    <!-- Actions Menu -->
+    <div v-if="showActionsMenu" class="actions-menu">
+      <button class="menu-item" @click="editTask">
+        <Icon name="lucide:edit" size="16" />
+        <span>Редактировать</span>
+      </button>
+      <button class="menu-item delete" @click="deleteTask">
+        <Icon name="lucide:trash-2" size="16" />
+        <span>Удалить</span>
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Task } from '~/stores/tasks'
-import { computed } from 'vue'
+import type { Task } from '~/stores/tasks'
 
-const props = defineProps<{
+interface Props {
   task: Task
-  isTimerActive: boolean
-  timerDisplay: string
-}>()
+}
 
-const emit = defineEmits<{
-  toggle: []
-  'timer-start': []
-  'timer-pause': []
-  'timer-resume': []
-  'timer-stop': []
-  edit: []
-  delete: []
-}>()
+const props = defineProps<Props>()
+const emit = defineEmits(['toggle', 'edit', 'delete', 'start-timer'])
 
 const tasksStore = useTasksStore()
+const router = useRouter()
 
-// Получаем информацию о категории
-const category = computed(() => {
-  return tasksStore.categories.find((cat) => cat.id === props.task.category)
+// Local state
+const showActionsMenu = ref(false)
+const isDragging = ref(false)
+
+// Computed
+const category = computed(() => tasksStore.getCategoryById(props.task.category))
+const priorityLabel = computed(() => {
+  const labels = { high: 'Высокий', medium: 'Средний', low: 'Низкий' }
+  return labels[props.task.priority]
 })
 
-const categoryName = computed(() => {
-  return category.value?.name || 'Без категории'
-})
+// Methods
+const toggleTaskStatus = () => {
+  emit('toggle', props.task.id)
+}
 
-const categoryIcon = computed(() => {
-  return category.value?.icon || 'lucide:folder'
-})
+const editTask = () => {
+  emit('edit', props.task)
+  showActionsMenu.value = false
+}
 
-const categoryColor = computed(() => {
-  return category.value?.color || '#a0a0a0'
-})
+const deleteTask = () => {
+  emit('delete', props.task.id)
+  showActionsMenu.value = false
+}
 
-// Иконка приоритета
-const priorityIcon = computed(() => {
-  switch (props.task.priority) {
-    case 'high':
-      return 'lucide:chevron-up'
-    case 'medium':
-      return 'lucide:minus'
-    case 'low':
-      return 'lucide:chevron-down'
-    default:
-      return 'lucide:minus'
-  }
-})
+const startTimer = () => {
+  emit('start-timer', props.task)
+  router.push('/timer')
+}
 
-// Проверка просроченности
-const isOverdue = computed(() => {
-  if (!props.task.dueAt) return false
-  return (
-    new Date(props.task.dueAt) < new Date() && props.task.status === 'active'
-  )
-})
+const toggleActionsMenu = () => {
+  showActionsMenu.value = !showActionsMenu.value
+}
 
-// Форматирование времени
-const formatTime = (minutes: number) => {
+const openContextMenu = (event: MouseEvent) => {
+  event.preventDefault()
+  showActionsMenu.value = true
+}
+
+const formatTimeSpent = (minutes: number) => {
   const hours = Math.floor(minutes / 60)
   const mins = minutes % 60
 
@@ -188,51 +158,59 @@ const formatTime = (minutes: number) => {
   return `${mins}м`
 }
 
-const formatDate = (date: Date) => {
+const formatDueDate = (date: Date) => {
+  const due = new Date(date)
   const today = new Date()
-  const taskDate = new Date(date)
+  const diff = Math.floor(
+    (due.getTime() - today.getTime()) / (1000 * 3600 * 24)
+  )
 
-  if (taskDate.toDateString() === today.toDateString()) {
-    return 'Сегодня'
-  }
+  if (diff === 0) return 'Сегодня'
+  if (diff === 1) return 'Завтра'
+  if (diff === -1) return 'Вчера'
+  if (diff > 0 && diff < 7) return `через ${diff} д`
+  if (diff < 0 && diff > -7) return `${Math.abs(diff)} д назад`
 
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-  if (taskDate.toDateString() === yesterday.toDateString()) {
-    return 'Вчера'
-  }
-
-  return taskDate.toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'short',
-  })
+  return due.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
 }
+
+const startDrag = (event: MouseEvent | TouchEvent) => {
+  event.preventDefault()
+  isDragging.value = true
+  // TODO: Implement drag and drop
+}
+
+// Close menu when clicking outside
+onClickOutside(() => {
+  showActionsMenu.value = false
+})
 </script>
 
 <style scoped lang="scss">
 .task-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--space-3);
   padding: var(--space-4);
-  background: var(--surface-bg);
+  background: var(--card-bg);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-card);
   cursor: pointer;
   transition: all var(--duration-base);
   position: relative;
+  user-select: none;
 
   &:hover {
     border-color: rgba(255, 255, 255, 0.1);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    transform: translateX(4px);
+    box-shadow: var(--shadow-sm);
+
+    .drag-handle {
+      opacity: 1;
+    }
   }
 
-  &:active {
-    transform: translateY(0);
-  }
-
-  &.task-completed {
+  &.completed {
     opacity: 0.7;
 
     .task-title {
@@ -240,73 +218,43 @@ const formatDate = (date: Date) => {
       color: var(--text-secondary);
     }
 
-    .task-checkbox {
-      :deep(svg) {
-        color: var(--success);
-      }
+    .task-checkbox :deep(svg) {
+      color: var(--success);
     }
   }
 
-  &.task-high {
-    border-left: 4px solid var(--error);
-  }
-
-  &.task-medium {
-    border-left: 4px solid var(--warning);
-  }
-
-  &.task-low {
-    border-left: 4px solid var(--success);
-  }
-
-  &.task-timer-active {
-    background: rgba(93, 95, 239, 0.05);
-    border-color: rgba(93, 95, 239, 0.2);
-
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(93, 95, 239, 0.1),
-        transparent
-      );
-      animation: shimmer 2s infinite;
-    }
+  &.dragging {
+    opacity: 0.5;
+    border: 1px dashed var(--accent-primary);
   }
 }
 
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
-}
+.drag-handle {
+  @include button-reset;
+  @include flex-center;
+  width: 20px;
+  height: 20px;
+  opacity: 0;
+  color: var(--text-secondary);
+  cursor: grab;
+  transition: opacity var(--duration-base);
 
-.task-content {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  flex: 1;
-  min-width: 0;
+  &:active {
+    cursor: grabbing;
+  }
 }
 
 .task-checkbox {
   @include flex-center;
   flex-shrink: 0;
-  padding: var(--space-1);
-  border-radius: var(--radius-sm);
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.05);
   transition: all var(--duration-base);
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(93, 95, 239, 0.1);
     transform: scale(1.1);
   }
 
@@ -315,7 +263,7 @@ const formatDate = (date: Date) => {
   }
 }
 
-.task-info {
+.task-content {
   flex: 1;
   min-width: 0;
 }
@@ -328,19 +276,19 @@ const formatDate = (date: Date) => {
 }
 
 .task-title {
-  font-weight: var(--font-semibold);
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
   color: var(--text-primary);
   line-height: var(--leading-tight);
   @include text-truncate;
 }
 
 .task-priority {
-  @include flex-center;
-  width: 20px;
-  height: 20px;
-  border-radius: var(--radius-sm);
   font-size: var(--text-xs);
-  font-weight: var(--font-bold);
+  font-weight: var(--font-semibold);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
 
   &.priority-high {
     background: rgba(248, 113, 113, 0.1);
@@ -358,40 +306,17 @@ const formatDate = (date: Date) => {
   }
 }
 
-.task-description {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  line-height: var(--leading-relaxed);
-  margin-bottom: var(--space-2);
-  @include text-truncate-multiline(2);
-}
-
 .task-meta {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   font-size: var(--text-xs);
-  margin-bottom: var(--space-2);
   flex-wrap: wrap;
 }
 
-.task-category {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  background: rgba(var(--category-color, 93, 95, 239), 0.1);
-  color: var(--category-color, var(--accent-primary));
-  border-radius: var(--radius-sm);
-  font-weight: var(--font-medium);
-
-  :deep(svg) {
-    color: var(--category-color, var(--accent-primary));
-  }
-}
-
+.task-category,
 .task-time,
-.task-deadline {
+.task-due {
   display: flex;
   align-items: center;
   gap: var(--space-1);
@@ -399,138 +324,15 @@ const formatDate = (date: Date) => {
   font-weight: var(--font-medium);
 
   :deep(svg) {
-    color: var(--text-secondary);
+    flex-shrink: 0;
   }
-}
-
-.task-deadline.task-overdue {
-  color: var(--error);
-
-  :deep(svg) {
-    color: var(--error);
-  }
-}
-
-.task-tags {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.task-tag {
-  padding: var(--space-1) var(--space-2);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-secondary);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
 }
 
 .task-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  flex-shrink: 0;
-}
-
-.timer-section {
-  display: flex;
-  align-items: center;
   gap: var(--space-2);
-
-  &.active {
-    .active-timer {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-      padding: var(--space-2) var(--space-3);
-      background: var(--accent-primary);
-      color: white;
-      border-radius: var(--radius-button);
-      font-weight: var(--font-bold);
-    }
-  }
-}
-
-.timer-button {
-  @include button-reset;
-  @include flex-center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-full);
-  background: rgba(93, 95, 239, 0.1);
-  color: var(--accent-primary);
-  transition: all var(--duration-base);
-
-  &:hover {
-    background: var(--accent-primary);
-    color: white;
-    transform: scale(1.1);
-  }
-}
-
-.timer-display {
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--text-secondary);
-
-  .active & {
-    color: white;
-  }
-}
-
-.timer-pulse {
-  width: 8px;
-  height: 8px;
-  background: white;
-  border-radius: 50%;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.7;
-    transform: scale(1.2);
-  }
-}
-
-.timer-controls {
-  display: flex;
-  gap: var(--space-1);
-}
-
-.timer-control {
-  @include button-reset;
-  @include flex-center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-button);
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  transition: all var(--duration-base);
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(1.1);
-  }
-
-  &.stop {
-    background: rgba(248, 113, 113, 0.2);
-
-    &:hover {
-      background: var(--error);
-    }
-  }
-}
-
-.action-buttons {
-  display: flex;
-  gap: var(--space-1);
+  flex-shrink: 0;
 }
 
 .action-button {
@@ -542,53 +344,92 @@ const formatDate = (date: Date) => {
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-secondary);
   transition: all var(--duration-base);
-  opacity: 0;
-
-  .task-item:hover & {
-    opacity: 1;
-  }
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
+    background: rgba(93, 95, 239, 0.1);
+    color: var(--accent-primary);
     transform: scale(1.1);
   }
 
-  &.delete:hover {
-    background: rgba(248, 113, 113, 0.1);
-    color: var(--error);
+  &.start-timer:hover {
+    background: var(--accent-primary);
+    color: white;
   }
 }
 
-[data-theme='light'] {
-  .task-item {
-    background: var(--surface-bg);
-    border: 1px solid rgba(0, 0, 0, 0.05);
+.actions-menu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: var(--space-4);
+  background: var(--card-bg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(20px);
+  z-index: var(--z-dropdown);
+  min-width: 160px;
+  animation: slideDown 0.2s ease-out;
 
-    &:hover {
-      border-color: rgba(0, 0, 0, 0.1);
-    }
+  &::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    right: 16px;
+    width: 10px;
+    height: 10px;
+    background: var(--card-bg);
+    transform: rotate(45deg);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
 
-    &.task-timer-active {
-      background: rgba(93, 95, 239, 0.05);
-      border-color: rgba(93, 95, 239, 0.1);
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.menu-item {
+  @include button-reset;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  transition: all var(--duration-base);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  &:first-child {
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+  }
+
+  &:last-child {
+    border-radius: 0 0 var(--radius-card) var(--radius-card);
+  }
+
+  &.delete {
+    color: var(--error);
+
+    :deep(svg) {
+      color: var(--error);
     }
   }
 
-  .task-checkbox:hover {
-    background: rgba(0, 0, 0, 0.05);
-  }
-
-  .task-tag {
-    background: rgba(0, 0, 0, 0.05);
-  }
-
-  .action-button {
-    background: rgba(0, 0, 0, 0.05);
-
-    &:hover {
-      background: rgba(0, 0, 0, 0.1);
-    }
+  :deep(svg) {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
   }
 }
 </style>
