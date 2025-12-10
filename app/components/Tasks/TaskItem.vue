@@ -1,96 +1,123 @@
 <template>
   <div
     class="task-item"
-    :class="{
-      completed: task.status === 'completed',
-      [`priority-${task.priority}`]: true,
-      dragging: isDragging,
-    }"
-    @click="toggleTaskStatus"
-    @contextmenu.prevent="openContextMenu"
+    :class="[
+      `priority-${task.priority}`,
+      { completed: task.status === 'completed', dragging: isDragging },
+    ]"
+    draggable="true"
+    @dragstart="handleDragStart"
+    @dragend="handleDragEnd"
+    @touchstart="handleTouchStart"
+    @touchmove="handleTouchMove"
+    @touchend="handleTouchEnd"
+    @click="toggleStatus"
   >
-    <!-- Drag Handle -->
-    <button
-      class="drag-handle"
-      @mousedown="startDrag"
-      @touchstart="startDrag"
-      @click.stop
-    >
-      <Icon name="lucide:grip-vertical" size="16" />
-    </button>
+    <!-- Priority Indicator -->
+    <div class="priority-indicator"></div>
 
     <!-- Checkbox -->
-    <div class="task-checkbox" @click.stop="toggleTaskStatus">
+    <button class="task-checkbox" @click.stop="toggleStatus">
       <Icon
         :name="
           task.status === 'completed' ? 'lucide:check-circle' : 'lucide:circle'
         "
         size="20"
       />
-    </div>
+    </button>
 
     <!-- Task Content -->
     <div class="task-content">
       <div class="task-header">
-        <h4 class="task-title">{{ task.title }}</h4>
-        <div class="task-priority" :class="`priority-${task.priority}`">
-          {{ priorityLabel }}
-        </div>
-      </div>
-
-      <div class="task-meta">
-        <!-- Category -->
-        <div class="task-category" :style="{ color: category?.color }">
-          <Icon :name="category?.icon || 'lucide:tag'" size="12" />
-          <span>{{ category?.name || 'Без категории' }}</span>
-        </div>
-
-        <!-- Time Spent -->
-        <div
-          v-if="task.spentMinutes && task.spentMinutes > 0"
-          class="task-time"
+        <h4
+          class="task-title"
+          :class="{ completed: task.status === 'completed' }"
         >
-          <Icon name="lucide:clock" size="12" />
-          <span>{{ formatTimeSpent(task.spentMinutes) }}</span>
-        </div>
-
-        <!-- Due Date -->
-        <div v-if="task.dueAt" class="task-due">
-          <Icon name="lucide:calendar" size="12" />
-          <span>{{ formatDueDate(task.dueAt) }}</span>
+          {{ task.title }}
+        </h4>
+        <div class="task-actions">
+          <button
+            v-if="task.estimatedMinutes && task.status === 'active'"
+            class="action-button timer-button"
+            @click.stop="startTimer"
+            title="Запустить таймер"
+          >
+            <Icon name="lucide:play" size="14" />
+            <span>{{ formatMinutes(task.estimatedMinutes) }}</span>
+          </button>
+          <button
+            class="action-button edit-button"
+            @click.stop="openEdit"
+            title="Редактировать"
+          >
+            <Icon name="lucide:pencil" size="14" />
+          </button>
         </div>
       </div>
-    </div>
 
-    <!-- Quick Actions -->
-    <div class="task-actions">
-      <button
-        class="action-button start-timer"
-        @click.stop="startTimer"
-        title="Запустить таймер"
-      >
-        <Icon name="lucide:play" size="16" />
-      </button>
+      <!-- Task Details -->
+      <div v-if="showDetails" class="task-details">
+        <!-- Description -->
+        <p v-if="task.description" class="task-description">
+          {{ task.description }}
+        </p>
 
-      <button
-        class="action-button more-actions"
-        @click.stop="toggleActionsMenu"
-        title="Другие действия"
-      >
-        <Icon name="lucide:more-vertical" size="16" />
-      </button>
-    </div>
+        <!-- Tags & Category -->
+        <div class="task-meta">
+          <!-- Category -->
+          <span
+            v-if="taskCategory"
+            class="category-badge"
+            :style="{ background: taskCategory.color + '20' }"
+          >
+            <Icon :name="taskCategory.icon" size="12" />
+            <span>{{ taskCategory.name }}</span>
+          </span>
 
-    <!-- Actions Menu -->
-    <div v-if="showActionsMenu" class="actions-menu">
-      <button class="menu-item" @click="editTask">
-        <Icon name="lucide:edit" size="16" />
-        <span>Редактировать</span>
-      </button>
-      <button class="menu-item delete" @click="deleteTask">
-        <Icon name="lucide:trash-2" size="16" />
-        <span>Удалить</span>
-      </button>
+          <!-- Tags -->
+          <span v-for="tag in task.tags" :key="tag" class="tag-badge">
+            {{ tag }}
+          </span>
+
+          <!-- Due Date -->
+          <span
+            v-if="task.dueAt"
+            class="due-date"
+            :class="{ overdue: isOverdue }"
+          >
+            <Icon name="lucide:calendar" size="12" />
+            <span>{{ formatDueDate(task.dueAt) }}</span>
+          </span>
+
+          <!-- Time Spent -->
+          <span
+            v-if="task.spentMinutes && task.spentMinutes > 0"
+            class="time-spent"
+          >
+            <Icon name="lucide:clock" size="12" />
+            <span>{{ formatMinutes(task.spentMinutes) }}</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <button
+          class="quick-action delete"
+          @click.stop="deleteTask"
+          title="Удалить"
+        >
+          <Icon name="lucide:trash-2" size="14" />
+        </button>
+        <button
+          v-if="task.status === 'active'"
+          class="quick-action complete"
+          @click.stop="toggleStatus"
+          title="Завершить"
+        >
+          <Icon name="lucide:check" size="14" />
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -103,163 +130,239 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const emit = defineEmits(['toggle', 'edit', 'delete', 'start-timer'])
+const emit = defineEmits(['edit', 'delete', 'toggle', 'timer-start'])
 
 const tasksStore = useTasksStore()
-const router = useRouter()
-
-// Local state
-const showActionsMenu = ref(false)
 const isDragging = ref(false)
+const showDetails = ref(false)
+const touchStartX = ref(0)
+const touchStartY = ref(0)
 
 // Computed
-const category = computed(() => tasksStore.getCategoryById(props.task.category))
-const priorityLabel = computed(() => {
-  const labels = { high: 'Высокий', medium: 'Средний', low: 'Низкий' }
-  return labels[props.task.priority]
+const taskCategory = computed(() => {
+  return tasksStore.categories.find((cat) => cat.id === props.task.category)
+})
+
+const isOverdue = computed(() => {
+  if (!props.task.dueAt) return false
+  return (
+    new Date(props.task.dueAt) < new Date() && props.task.status === 'active'
+  )
 })
 
 // Methods
-const toggleTaskStatus = () => {
+const toggleStatus = () => {
   emit('toggle', props.task.id)
-}
-
-const editTask = () => {
-  emit('edit', props.task)
-  showActionsMenu.value = false
 }
 
 const deleteTask = () => {
   emit('delete', props.task.id)
-  showActionsMenu.value = false
+}
+
+const openEdit = () => {
+  emit('edit', props.task)
 }
 
 const startTimer = () => {
-  emit('start-timer', props.task)
-  router.push('/timer')
+  emit('timer-start', props.task)
 }
 
-const toggleActionsMenu = () => {
-  showActionsMenu.value = !showActionsMenu.value
-}
-
-const openContextMenu = (event: MouseEvent) => {
-  event.preventDefault()
-  showActionsMenu.value = true
-}
-
-const formatTimeSpent = (minutes: number) => {
+const formatMinutes = (minutes: number) => {
+  if (minutes < 60) return `${minutes}м`
   const hours = Math.floor(minutes / 60)
   const mins = minutes % 60
-
-  if (hours > 0) {
-    return `${hours}ч ${mins}м`
-  }
-  return `${mins}м`
+  return mins > 0 ? `${hours}ч ${mins}м` : `${hours}ч`
 }
 
 const formatDueDate = (date: Date) => {
+  const now = new Date()
   const due = new Date(date)
-  const today = new Date()
-  const diff = Math.floor(
-    (due.getTime() - today.getTime()) / (1000 * 3600 * 24)
-  )
+  const diff = due.getTime() - now.getTime()
+  const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
 
-  if (diff === 0) return 'Сегодня'
-  if (diff === 1) return 'Завтра'
-  if (diff === -1) return 'Вчера'
-  if (diff > 0 && diff < 7) return `через ${diff} д`
-  if (diff < 0 && diff > -7) return `${Math.abs(diff)} д назад`
+  if (days === 0) return 'Сегодня'
+  if (days === 1) return 'Завтра'
+  if (days < 7) return `Через ${days} д`
 
-  return due.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+  return due.toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+  })
 }
 
-const startDrag = (event: MouseEvent | TouchEvent) => {
-  event.preventDefault()
+// Drag & Drop
+const handleDragStart = (e: DragEvent) => {
   isDragging.value = true
-  // TODO: Implement drag and drop
+  e.dataTransfer?.setData('taskId', props.task.id)
 }
 
-// Close menu when clicking outside
-onClickOutside(() => {
-  showActionsMenu.value = false
+const handleDragEnd = () => {
+  isDragging.value = false
+}
+
+// Touch gestures for swipe actions
+const handleTouchStart = (e: TouchEvent) => {
+  touchStartX.value = e.touches[0].clientX
+  touchStartY.value = e.touches[0].clientY
+}
+
+const handleTouchMove = (e: TouchEvent) => {
+  if (!touchStartX.value) return
+
+  const touchX = e.touches[0].clientX
+  const diffX = touchX - touchStartX.value
+
+  if (Math.abs(diffX) > 50) {
+    // Swipe detected
+    if (diffX > 0) {
+      // Swipe right - complete
+      if (props.task.status === 'active') {
+        toggleStatus()
+      }
+    } else {
+      // Swipe left - delete
+      deleteTask()
+    }
+    touchStartX.value = 0
+  }
+}
+
+const handleTouchEnd = () => {
+  touchStartX.value = 0
+  touchStartY.value = 0
+}
+
+// Toggle details on long press (mobile)
+let longPressTimer: NodeJS.Timeout
+
+const handleLongPress = () => {
+  showDetails.value = !showDetails.value
+}
+
+const setupLongPress = () => {
+  const element = document.querySelector('.task-item')
+  if (!element) return
+
+  element.addEventListener('touchstart', () => {
+    longPressTimer = setTimeout(handleLongPress, 500)
+  })
+
+  element.addEventListener('touchend', () => {
+    clearTimeout(longPressTimer)
+  })
+
+  element.addEventListener('touchmove', () => {
+    clearTimeout(longPressTimer)
+  })
+}
+
+onMounted(() => {
+  setupLongPress()
+})
+
+onUnmounted(() => {
+  clearTimeout(longPressTimer)
 })
 </script>
 
 <style scoped lang="scss">
 .task-item {
+  @include card;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-4);
-  background: var(--card-bg);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius-card);
+  margin-bottom: var(--space-2);
+  border-left: 4px solid transparent;
   cursor: pointer;
   transition: all var(--duration-base);
   position: relative;
-  user-select: none;
+  overflow: hidden;
 
   &:hover {
     border-color: rgba(255, 255, 255, 0.1);
-    transform: translateX(4px);
-    box-shadow: var(--shadow-sm);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 
-    .drag-handle {
+    .quick-actions {
       opacity: 1;
+      transform: translateX(0);
     }
   }
 
+  &:active {
+    transform: translateY(0);
+  }
+
+  &.dragging {
+    opacity: 0.5;
+    transform: scale(0.98);
+    box-shadow: var(--shadow-lg);
+  }
+
   &.completed {
-    opacity: 0.7;
+    opacity: 0.6;
 
     .task-title {
       text-decoration: line-through;
       color: var(--text-secondary);
     }
 
-    .task-checkbox :deep(svg) {
-      color: var(--success);
+    .priority-indicator {
+      opacity: 0.3;
     }
   }
 
-  &.dragging {
-    opacity: 0.5;
-    border: 1px dashed var(--accent-primary);
+  // Priority styles
+  &.priority-high {
+    border-left-color: var(--error);
+
+    .priority-indicator {
+      background: var(--error);
+    }
+  }
+
+  &.priority-medium {
+    border-left-color: var(--warning);
+
+    .priority-indicator {
+      background: var(--warning);
+    }
+  }
+
+  &.priority-low {
+    border-left-color: var(--success);
+
+    .priority-indicator {
+      background: var(--success);
+    }
   }
 }
 
-.drag-handle {
-  @include button-reset;
-  @include flex-center;
-  width: 20px;
-  height: 20px;
-  opacity: 0;
-  color: var(--text-secondary);
-  cursor: grab;
-  transition: opacity var(--duration-base);
-
-  &:active {
-    cursor: grabbing;
-  }
+.priority-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 4px;
+  opacity: 0.8;
 }
 
 .task-checkbox {
+  @include button-reset;
   @include flex-center;
   flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-full);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-button);
   background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
   transition: all var(--duration-base);
 
   &:hover {
-    background: rgba(93, 95, 239, 0.1);
+    background: rgba(93, 242, 126, 0.1);
+    color: var(--success);
     transform: scale(1.1);
-  }
-
-  :deep(svg) {
-    color: var(--text-secondary);
   }
 }
 
@@ -270,8 +373,9 @@ onClickOutside(() => {
 
 .task-header {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
   margin-bottom: var(--space-2);
 }
 
@@ -280,57 +384,16 @@ onClickOutside(() => {
   font-weight: var(--font-medium);
   color: var(--text-primary);
   line-height: var(--leading-tight);
-  @include text-truncate;
-}
+  flex: 1;
 
-.task-priority {
-  font-size: var(--text-xs);
-  font-weight: var(--font-semibold);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  white-space: nowrap;
-
-  &.priority-high {
-    background: rgba(248, 113, 113, 0.1);
-    color: var(--error);
-  }
-
-  &.priority-medium {
-    background: rgba(250, 204, 21, 0.1);
-    color: var(--warning);
-  }
-
-  &.priority-low {
-    background: rgba(93, 242, 126, 0.1);
-    color: var(--success);
-  }
-}
-
-.task-meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  font-size: var(--text-xs);
-  flex-wrap: wrap;
-}
-
-.task-category,
-.task-time,
-.task-due {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--text-secondary);
-  font-weight: var(--font-medium);
-
-  :deep(svg) {
-    flex-shrink: 0;
+  &.completed {
+    color: var(--text-secondary);
+    text-decoration: line-through;
   }
 }
 
 .task-actions {
   display: flex;
-  align-items: center;
   gap: var(--space-2);
   flex-shrink: 0;
 }
@@ -338,50 +401,35 @@ onClickOutside(() => {
 .action-button {
   @include button-reset;
   @include flex-center;
-  width: 32px;
-  height: 32px;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-button);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
   transition: all var(--duration-base);
 
-  &:hover {
+  &.timer-button {
     background: rgba(93, 95, 239, 0.1);
     color: var(--accent-primary);
-    transform: scale(1.1);
+
+    &:hover {
+      background: rgba(93, 95, 239, 0.2);
+    }
   }
 
-  &.start-timer:hover {
-    background: var(--accent-primary);
-    color: white;
+  &.edit-button {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
   }
 }
 
-.actions-menu {
-  position: absolute;
-  top: calc(100% + var(--space-2));
-  right: var(--space-4);
-  background: var(--card-bg);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(20px);
-  z-index: var(--z-dropdown);
-  min-width: 160px;
-  animation: slideDown 0.2s ease-out;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: -6px;
-    right: 16px;
-    width: 10px;
-    height: 10px;
-    background: var(--card-bg);
-    transform: rotate(45deg);
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-  }
+.task-details {
+  animation: slideDown 0.3s ease-out;
 }
 
 @keyframes slideDown {
@@ -395,41 +443,144 @@ onClickOutside(() => {
   }
 }
 
-.menu-item {
-  @include button-reset;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  width: 100%;
-  padding: var(--space-3) var(--space-4);
+.task-description {
+  color: var(--text-secondary);
   font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  margin-bottom: var(--space-3);
+}
+
+.task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.category-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-medium);
   color: var(--text-primary);
+
+  :deep(svg) {
+    opacity: 0.8;
+  }
+}
+
+.tag-badge {
+  padding: var(--space-1) var(--space-2);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-medium);
+}
+
+.due-date {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-medium);
+
+  &.overdue {
+    background: rgba(248, 113, 113, 0.1);
+    color: var(--error);
+  }
+}
+
+.time-spent {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: rgba(93, 242, 126, 0.1);
+  color: var(--success);
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-medium);
+}
+
+.quick-actions {
+  position: absolute;
+  top: 50%;
+  right: var(--space-4);
+  transform: translateY(-50%) translateX(100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  opacity: 0;
+  transition: all var(--duration-base);
+}
+
+.quick-action {
+  @include button-reset;
+  @include flex-center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-button);
+  color: white;
   transition: all var(--duration-base);
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  &:first-child {
-    border-radius: var(--radius-card) var(--radius-card) 0 0;
-  }
-
-  &:last-child {
-    border-radius: 0 0 var(--radius-card) var(--radius-card);
-  }
-
   &.delete {
-    color: var(--error);
+    background: var(--error);
 
-    :deep(svg) {
-      color: var(--error);
+    &:hover {
+      background: rgba(248, 113, 113, 0.8);
     }
   }
 
-  :deep(svg) {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
+  &.complete {
+    background: var(--success);
+
+    &:hover {
+      background: rgba(93, 242, 126, 0.8);
+    }
+  }
+
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+// Light theme adjustments
+[data-theme='light'] {
+  .task-checkbox {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  .action-button.edit-button {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  .tag-badge,
+  .due-date:not(.overdue) {
+    background: rgba(0, 0, 0, 0.05);
+  }
+}
+
+// Mobile optimizations
+@include breakpoint(xs) {
+  .task-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .task-actions {
+    align-self: flex-end;
+  }
+
+  .quick-actions {
+    position: static;
+    transform: none;
+    opacity: 1;
+    flex-direction: row;
+    margin-top: var(--space-2);
   }
 }
 </style>
