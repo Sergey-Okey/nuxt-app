@@ -9,8 +9,8 @@ $card-bg: #1f1f1f !default;
 $surface-bg: #2a2a2a !default;
 
 // Акцентные цвета
-$accent-primary: #30ac4b !default;
-$accent-secondary: #5d5fef !default;
+$accent-primary: #7777 !default;
+$accent-secondary: #e8e8ff !default;
 $accent-warning: #facc15 !default;
 $accent-error: #f87171 !default;
 
@@ -23,7 +23,7 @@ $text-muted: #6b7280 !default;
 $success: #5df27e !default;
 $warning: #facc15 !default;
 $error: #f87171 !default;
-$info: #60a5fa !default;
+$info: #e5edf7 !default;
 
 // Градиенты
 $gradient-primary: linear-gradient(135deg, $accent-primary 0%, $accent-secondary 100%) !default;

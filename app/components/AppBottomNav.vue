@@ -22,21 +22,30 @@ const activeNav = computed(() => {
 })
 
 const navigation = [
-  { name: 'dashboard', icon: 'lucide:home', label: 'Главная', route: '/' },
+  {
+    name: 'analytics',
+    icon: 'lucide:bar-chart',
+    label: 'Аналитика',
+    route: '/',
+  },
   {
     name: 'tasks',
     icon: 'lucide:check-square',
     label: 'Задачи',
     route: '/tasks',
   },
-  { name: 'timer', icon: 'lucide:clock', label: 'Таймер', route: '/timer' },
   {
-    name: 'analytics',
-    icon: 'lucide:bar-chart',
-    label: 'Аналитика',
-    route: '/analytics',
+    name: 'timer',
+    icon: 'lucide:clock',
+    label: 'Таймер',
+    route: '/timer',
   },
-  { name: 'profile', icon: 'lucide:user', label: 'Профиль', route: '/profile' },
+  {
+    name: 'profile',
+    icon: 'lucide:user',
+    label: 'Профиль',
+    route: '/profile',
+  },
 ]
 
 const navigateTo = (route: string) => {

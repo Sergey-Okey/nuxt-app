@@ -60,7 +60,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
-      title: 'TaskFlow',
+      title: 'Task',
       link: [{ rel: 'icon', type: 'image/svg+xml', href: '/icon.svg' }],
       meta: [
         { name: 'theme-color', content: '#0d0d0d' },
