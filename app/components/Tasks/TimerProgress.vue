@@ -1,57 +1,35 @@
 <template>
-  <div class="timer-progress" :class="{ hidden: isHidden }">
-    <!-- Header - всегда видимый -->
-    <div class="timer-header" @click="isHidden ? restoreTimer() : null">
-      <div class="timer-header-content">
-        <div class="timer-info-compact">
-          <Icon name="lucide:zap" size="16" />
-          <span class="timer-task-compact">{{ task.title }}</span>
-          <div class="timer-time-compact" v-if="!isHidden">
-            {{ formattedTime }}
-          </div>
-        </div>
-        <div class="timer-header-actions">
-          <button
-            v-if="!isHidden"
-            class="hide-timer"
-            @click.stop="toggleHideTimer"
-            title="Свернуть таймер"
-          >
-            <Icon name="lucide:chevron-up" size="16" />
-          </button>
-          <button
-            v-else
-            class="restore-timer"
-            @click.stop="restoreTimer"
-            title="Развернуть таймер"
-          >
-            <Icon name="lucide:chevron-down" size="16" />
-            <span>Продолжить</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Progress mini-bar -->
-      <div class="mini-progress-bar" v-if="!isHidden">
-        <div
-          class="mini-progress-fill"
-          :style="{ width: progress + '%' }"
-        ></div>
-      </div>
+  <div v-if="timerStore.state.isVisible" class="timer-progress">
+    <div class="timer-header">
+      <h3 class="timer-title">
+        <Icon name="lucide:zap" size="20" />
+        <span>Фокус-сессия</span>
+        <button
+          class="timer-close"
+          @click="timerStore.hideTimer"
+          title="Закрыть таймер"
+        >
+          <Icon name="lucide:x" size="16" />
+        </button>
+      </h3>
+      <div class="timer-task">{{ timerStore.state.taskTitle }}</div>
     </div>
 
-    <!-- Main content - скрывается при isHidden -->
-    <div v-if="!isHidden" class="timer-main">
+    <div class="timer-main">
       <!-- Digital Timer Display -->
       <div class="timer-display">
-        <div class="timer-time-large">{{ formattedTime }}</div>
-        <div class="timer-phase">{{ phaseText }}</div>
+        <div class="timer-time">{{ timerStore.formattedTime }}</div>
+        <div class="timer-phase">Работа</div>
       </div>
 
       <!-- Progress Bar -->
       <div class="progress-bar-container">
         <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: progress + '%' }"></div>
+          <div
+            class="progress-fill"
+            :class="{ complete: timerStore.isComplete }"
+            :style="{ width: timerStore.progress + '%' }"
+          ></div>
         </div>
         <div class="progress-labels">
           <span class="progress-current">{{ elapsedMinutes }} мин</span>
@@ -68,39 +46,44 @@
           :class="{
             active: dot <= completedDots,
             current: dot === currentDot,
+            last: dot === totalDots,
           }"
         ></div>
       </div>
 
       <!-- Controls -->
       <div class="timer-controls">
-        <template v-if="!isCompleted">
-          <button
-            v-if="!isRunning"
-            class="control-button primary"
-            @click="startTimer"
-          >
-            <Icon name="lucide:play" size="16" />
-            <span>Старт</span>
-          </button>
-          <button v-else class="control-button warning" @click="pauseTimer">
-            <Icon name="lucide:pause" size="16" />
-            <span>Пауза</span>
-          </button>
-          <button class="control-button secondary" @click="resetTimer">
-            <Icon name="lucide:rotate-ccw" size="16" />
-            <span>Сброс</span>
-          </button>
-        </template>
-        <button class="control-button success" @click="completeTimer">
+        <button
+          v-if="!timerStore.state.isRunning"
+          class="control-button primary"
+          @click="startTimer"
+        >
+          <Icon name="lucide:play" size="16" />
+          <span>{{ timerStore.currentTime > 0 ? 'Продолжить' : 'Старт' }}</span>
+        </button>
+        <button
+          v-else
+          class="control-button warning"
+          @click="timerStore.pauseTimer"
+        >
+          <Icon name="lucide:pause" size="16" />
+          <span>Пауза</span>
+        </button>
+        <button class="control-button secondary" @click="timerStore.resetTimer">
+          <Icon name="lucide:rotate-ccw" size="16" />
+          <span>Сброс</span>
+        </button>
+        <button
+          class="control-button success"
+          @click="timerStore.completeTimer"
+        >
           <Icon name="lucide:check" size="16" />
-          <span>{{ isCompleted ? 'Готово' : 'Завершить' }}</span>
+          <span>Завершить</span>
         </button>
       </div>
     </div>
 
-    <!-- Info - скрывается при isHidden -->
-    <div v-if="!isHidden" class="timer-info">
+    <div class="timer-info">
       <div class="info-item">
         <Icon name="lucide:target" size="16" />
         <span>Цель: {{ estimatedMinutes }} минут</span>
@@ -114,370 +97,104 @@
 </template>
 
 <script setup lang="ts">
-import { useToast } from '~/composables/useToast'
+const timerStore = useTimerStore()
 
-interface Props {
-  task: any
-}
-
-const props = defineProps<Props>()
-const toast = useToast()
-
-// Emit для обновления в родительском компоненте
-const emit = defineEmits<{
-  'timer-hidden': [id: string]
-  'timer-restored': [id: string]
-}>()
-
-// Timer state - сохраняем в localStorage
-const timerState = useLocalStorage(`timer_${props.task.id}`, {
-  isRunning: false,
-  elapsedTime: 0, // in seconds
-  isCompleted: false,
-  isHidden: false,
-  lastUpdated: Date.now(),
-})
-
-// Reactive state из localStorage
-const isRunning = ref(timerState.value.isRunning)
-const elapsedTime = ref(timerState.value.elapsedTime)
-const isCompleted = ref(timerState.value.isCompleted)
-const isHidden = ref(timerState.value.isHidden)
-
-// Константы
-const totalTime = ref(props.task.estimatedMinutes * 60 || 25 * 60) // 25 minutes default
-
-// Computed
-const formattedTime = computed(() => {
-  const minutes = Math.floor(elapsedTime.value / 60)
-  const seconds = elapsedTime.value % 60
-  return `${minutes.toString().padStart(2, '0')}:${seconds
-    .toString()
-    .padStart(2, '0')}`
-})
-
-const progress = computed(() => {
-  return Math.min(100, (elapsedTime.value / totalTime.value) * 100)
-})
-
+// Вычисляемые свойства
 const estimatedMinutes = computed(() => {
-  return Math.floor(totalTime.value / 60)
+  return Math.floor(timerStore.state.totalTime / 60)
 })
 
 const elapsedMinutes = computed(() => {
-  return Math.floor(elapsedTime.value / 60)
+  return Math.floor(timerStore.currentTime / 60)
 })
 
-const phaseText = computed(() => {
-  return isCompleted.value ? 'Завершено' : 'Работа'
-})
-
-// Dots for visual progress
+// Точки прогресса
 const totalDots = ref(10)
+
 const completedDots = computed(() => {
-  return Math.floor((progress.value / 100) * totalDots.value)
+  return Math.floor((timerStore.progress / 100) * totalDots.value)
 })
 
 const currentDot = computed(() => {
-  return Math.ceil((progress.value / 100) * totalDots.value)
+  const dot = Math.ceil((timerStore.progress / 100) * totalDots.value)
+  return dot === 0 ? 1 : dot
 })
 
-// Timer logic
-let timerInterval: NodeJS.Timeout | null = null
-
-// Сохраняем состояние в localStorage
-const saveState = () => {
-  timerState.value = {
-    isRunning: isRunning.value,
-    elapsedTime: elapsedTime.value,
-    isCompleted: isCompleted.value,
-    isHidden: isHidden.value,
-    lastUpdated: Date.now(),
-  }
-}
-
-// Восстанавливаем состояние при монтировании
-onMounted(() => {
-  if (isRunning.value && !isHidden.value) {
-    // Рассчитываем прошедшее время с момента последнего сохранения
-    const timePassed = Math.floor(
-      (Date.now() - timerState.value.lastUpdated) / 1000
-    )
-    elapsedTime.value += timePassed
-
-    // Проверяем не завершился ли таймер
-    if (elapsedTime.value >= totalTime.value) {
-      completeTimer()
-    } else {
-      startTimer()
-    }
-  }
-})
-
+// Методы
 const startTimer = () => {
-  if (!isRunning.value && !isCompleted.value) {
-    isRunning.value = true
-    timerInterval = setInterval(() => {
-      if (elapsedTime.value < totalTime.value) {
-        elapsedTime.value++
-        saveState()
-      } else {
-        completeTimer()
-      }
-    }, 1000)
-    saveState()
-
-    toast.show({
-      title: 'Таймер запущен',
-      message: `Отсчет времени начат`,
-      type: 'info',
-      duration: 2000,
-    })
+  if (timerStore.currentTime > 0) {
+    timerStore.continueTimer()
+  } else if (timerStore.state.taskId) {
+    timerStore.continueTimer()
   }
 }
-
-const pauseTimer = () => {
-  if (isRunning.value && timerInterval) {
-    isRunning.value = false
-    clearInterval(timerInterval)
-    timerInterval = null
-    saveState()
-
-    toast.show({
-      title: 'Таймер на паузе',
-      message: `Время: ${elapsedMinutes.value} минут`,
-      type: 'info',
-      duration: 2000,
-    })
-  }
-}
-
-const resetTimer = () => {
-  if (timerInterval) {
-    clearInterval(timerInterval)
-    timerInterval = null
-  }
-
-  isRunning.value = false
-  elapsedTime.value = 0
-  isCompleted.value = false
-  saveState()
-
-  toast.show({
-    title: 'Таймер сброшен',
-    message: 'Готов к новому отсчету',
-    type: 'info',
-    duration: 2000,
-  })
-}
-
-const completeTimer = () => {
-  // Останавливаем таймер
-  if (timerInterval) {
-    clearInterval(timerInterval)
-    timerInterval = null
-  }
-
-  isRunning.value = false
-  isCompleted.value = true
-  elapsedTime.value = totalTime.value // Устанавливаем полное время
-
-  // Добавляем время к задаче
-  const tasksStore = useTasksStore()
-  tasksStore.addTimeToTask(props.task.id, elapsedMinutes.value)
-
-  // Помечаем задачу как выполненную
-  tasksStore.updateTask(props.task.id, { status: 'completed' })
-
-  saveState()
-
-  // Автоматически скрываем таймер после завершения
-  setTimeout(() => {
-    toggleHideTimer()
-  }, 1000)
-
-  // Показываем уведомление
-  toast.show({
-    title: 'Задача выполнена! 🎉',
-    message: `Вы потратили ${elapsedMinutes.value} минут на "${props.task.title}"`,
-    type: 'success',
-    duration: 5000,
-  })
-}
-
-const toggleHideTimer = () => {
-  if (isRunning.value) {
-    pauseTimer()
-  }
-
-  isHidden.value = true
-  saveState()
-  emit('timer-hidden', props.task.id)
-
-  toast.show({
-    title: 'Таймер свернут',
-    message: 'Нажмите на заголовок, чтобы развернуть',
-    type: 'info',
-    duration: 2000,
-  })
-}
-
-// Восстановить таймер
-const restoreTimer = () => {
-  isHidden.value = false
-  saveState()
-  emit('timer-restored', props.task.id)
-
-  toast.show({
-    title: 'Таймер восстановлен',
-    message: 'Готов к продолжению',
-    type: 'info',
-    duration: 2000,
-  })
-}
-
-// Экспортируем методы для использования извне
-defineExpose({
-  restoreTimer,
-  resetTimer,
-  startTimer,
-  pauseTimer,
-  completeTimer,
-  isHidden,
-})
-
-// Cleanup on unmount
-onUnmounted(() => {
-  if (timerInterval) {
-    clearInterval(timerInterval)
-  }
-})
 </script>
 
 <style scoped lang="scss">
 .timer-progress {
   @include card;
+  padding: var(--space-5);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  margin-bottom: var(--space-4);
-  transition: all var(--duration-base);
-  overflow: hidden;
-
-  &:hover {
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-
-  &.hidden {
-    opacity: 0.7;
-    cursor: pointer;
-
-    &:hover {
-      border-color: rgba(93, 95, 239, 0.3);
-      opacity: 1;
-    }
-  }
+  margin: 0;
 }
 
-// Header - всегда видимый
 .timer-header {
-  padding: var(--space-3) var(--space-4);
-  background: var(--surface-bg);
-  cursor: pointer;
-  transition: all var(--duration-base);
+  margin-bottom: var(--space-4);
+  text-align: center;
+  position: relative;
+}
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.03);
+.timer-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--accent-primary);
+  margin-bottom: var(--space-2);
+
+  :deep(svg) {
+    color: var(--accent-primary);
   }
 }
 
-.timer-header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-2);
-}
-
-.timer-info-compact {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex: 1;
-}
-
-.timer-task-compact {
-  font-weight: var(--font-medium);
-  color: var(--text-primary);
-  @include text-truncate;
-  flex: 1;
-}
-
-.timer-time-compact {
-  font-family: var(--font-family-mono);
-  font-size: var(--text-sm);
-  color: var(--accent-primary);
-  font-weight: var(--font-bold);
-  background: rgba(93, 95, 239, 0.1);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-}
-
-.timer-header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.hide-timer,
-.restore-timer {
+.timer-close {
   @include button-reset;
   @include flex-center;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-button);
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-base);
-  gap: var(--space-1);
-}
-
-.hide-timer {
-  background: rgba(255, 255, 255, 0.05);
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
+  opacity: 0.7;
+  transition: all var(--duration-base);
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
+    opacity: 1;
+    color: var(--error);
+    background: rgba(248, 113, 113, 0.1);
   }
 }
 
-.restore-timer {
-  background: rgba(93, 95, 239, 0.1);
-  color: var(--accent-primary);
-
-  &:hover {
-    background: rgba(93, 95, 239, 0.2);
-  }
+.timer-task {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  font-weight: var(--font-medium);
+  @include text-truncate;
+  max-width: 250px;
+  margin: 0 auto;
+  padding: 0 var(--space-2);
 }
 
-.mini-progress-bar {
-  height: 3px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.mini-progress-fill {
-  height: 100%;
-  background: var(--accent-primary);
-  border-radius: 2px;
-  transition: width 0.3s ease;
-}
-
-// Main content
 .timer-main {
-  padding: var(--space-4);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 .timer-display {
@@ -485,13 +202,12 @@ onUnmounted(() => {
   margin-bottom: var(--space-3);
 }
 
-.timer-time-large {
+.timer-time {
   font-size: var(--text-3xl);
   font-weight: var(--font-bold);
   color: var(--text-primary);
   margin-bottom: var(--space-1);
   letter-spacing: 2px;
-  font-family: var(--font-family-mono);
 }
 
 .timer-phase {
@@ -521,6 +237,10 @@ onUnmounted(() => {
   background: var(--accent-primary);
   border-radius: 3px;
   transition: width 0.3s ease;
+
+  &.complete {
+    background: var(--success);
+  }
 }
 
 .progress-labels {
@@ -561,6 +281,18 @@ onUnmounted(() => {
     transform: scale(1.3);
     background: var(--accent-primary);
     box-shadow: 0 0 8px var(--accent-primary);
+  }
+
+  &.last {
+    background: rgba(255, 255, 255, 0.1);
+
+    &.active {
+      background: var(--success);
+    }
+
+    &.current {
+      background: var(--accent-primary);
+    }
   }
 }
 
@@ -625,24 +357,13 @@ onUnmounted(() => {
       transform: translateY(-1px);
     }
   }
-
-  &.error {
-    background: var(--error);
-    color: white;
-
-    &:hover {
-      opacity: 0.9;
-      transform: translateY(-1px);
-    }
-  }
 }
 
 .timer-info {
   display: flex;
   justify-content: space-around;
-  padding: var(--space-3) var(--space-4);
+  padding-top: var(--space-3);
   border-top: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(255, 255, 255, 0.02);
 }
 
 .info-item {
@@ -659,17 +380,16 @@ onUnmounted(() => {
 
 // Light theme adjustments
 [data-theme='light'] {
-  .timer-header {
-    background: var(--surface-bg);
-  }
-
-  .progress-bar,
-  .mini-progress-bar {
+  .progress-bar {
     background: rgba(0, 0, 0, 0.1);
   }
 
   .progress-dot {
     background: rgba(0, 0, 0, 0.1);
+
+    &.last {
+      background: rgba(0, 0, 0, 0.1);
+    }
   }
 
   .control-button.secondary {
@@ -678,18 +398,6 @@ onUnmounted(() => {
     &:hover {
       background: rgba(0, 0, 0, 0.1);
     }
-  }
-
-  .timer-info {
-    background: rgba(0, 0, 0, 0.02);
-  }
-
-  .hide-timer {
-    background: rgba(0, 0, 0, 0.05);
-  }
-
-  .timer-header:hover {
-    background: rgba(0, 0, 0, 0.03);
   }
 }
 </style>

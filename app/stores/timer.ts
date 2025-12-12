@@ -1,110 +1,171 @@
 import { defineStore } from 'pinia'
 
-export interface PomodoroSession {
-  id: string
-  taskId?: string
-  startAt: string
-  endAt?: string
-  phase: 'work' | 'short_break' | 'long_break'
-  elapsedTime: number
-}
-
 interface TimerState {
   taskId: string | null
+  taskTitle: string
   elapsedTime: number
   totalTime: number
   isRunning: boolean
   isVisible: boolean
   startTime: number | null
+  estimatedMinutes: number
 }
 
 export const useTimerStore = defineStore('timer', () => {
   // Состояние таймера
   const state = ref<TimerState>({
     taskId: null,
+    taskTitle: '',
     elapsedTime: 0,
     totalTime: 25 * 60,
     isRunning: false,
     isVisible: false,
     startTime: null,
+    estimatedMinutes: 25,
   })
 
-  // Загружаем состояние из localStorage при инициализации
-  onMounted(() => {
+  let timerInterval: NodeJS.Timeout | null = null
+
+  // Загружаем состояние из localStorage
+  const loadState = () => {
     const saved = localStorage.getItem('timerState')
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        // Восстанавливаем только если не прошло больше часа
-        if (parsed.startTime && Date.now() - parsed.startTime < 3600000) {
+        // Восстанавливаем только если не прошло больше 24 часов
+        if (parsed.startTime && Date.now() - parsed.startTime < 86400000) {
           state.value = {
             ...parsed,
-            isRunning: false, // Всегда сбрасываем running состояние
+            isRunning: false, // Всегда сбрасываем running при загрузке
           }
         }
       } catch (e) {
         console.error('Failed to load timer state:', e)
       }
     }
-  })
+  }
 
-  // Сохраняем состояние в localStorage
+  // Сохраняем состояние
   const saveState = () => {
     localStorage.setItem('timerState', JSON.stringify(state.value))
   }
 
+  // Инициализация
+  onMounted(() => {
+    loadState()
+    // Запускаем автоматическое сохранение каждые 30 секунд
+    setInterval(saveState, 30000)
+  })
+
+  // Обновляем время в реальном времени
+  const updateElapsedTime = () => {
+    if (state.value.isRunning && state.value.startTime) {
+      const currentElapsed = Math.floor(
+        (Date.now() - state.value.startTime) / 1000
+      )
+      state.value.elapsedTime += currentElapsed
+      state.value.startTime = Date.now()
+      saveState()
+    }
+  }
+
   // Начинаем таймер для задачи
-  const startForTask = (taskId: string, totalMinutes: number = 25) => {
+  const startForTask = (task: any, estimatedMinutes?: number) => {
+    updateElapsedTime()
+
+    const minutes = estimatedMinutes || task.estimatedMinutes || 25
+
     state.value = {
-      taskId,
+      taskId: task.id,
+      taskTitle: task.title,
       elapsedTime: 0,
-      totalTime: totalMinutes * 60,
+      totalTime: minutes * 60,
       isRunning: true,
       isVisible: true,
       startTime: Date.now(),
+      estimatedMinutes: minutes,
     }
+
+    startTimerInterval()
     saveState()
+
+    // Показываем уведомление
+    const notifications = inject('notifications') as any
+    notifications?.showNotification({
+      type: 'info',
+      title: 'Таймер запущен',
+      message: `Начали отсчет для задачи "${task.title}"`,
+      icon: 'lucide:play',
+      duration: 3000,
+    })
   }
 
   // Продолжаем существующий таймер
   const continueTimer = () => {
-    if (!state.value.taskId) return
+    if (!state.value.taskId || state.value.isRunning) return
 
     state.value.isRunning = true
     state.value.startTime = Date.now()
+    startTimerInterval()
     saveState()
   }
 
+  const startTimerInterval = () => {
+    if (timerInterval) clearInterval(timerInterval)
+
+    timerInterval = setInterval(() => {
+      if (state.value.isRunning) {
+        const currentTime = currentTime.value
+        if (currentTime >= state.value.totalTime) {
+          completeTimer()
+        }
+      }
+    }, 1000)
+  }
+
   const pauseTimer = () => {
-    if (state.value.isRunning && state.value.startTime) {
-      // Сохраняем прошедшее время
-      state.value.elapsedTime += Math.floor(
-        (Date.now() - state.value.startTime) / 1000
-      )
+    if (state.value.isRunning) {
+      updateElapsedTime()
       state.value.isRunning = false
       state.value.startTime = null
+
+      if (timerInterval) {
+        clearInterval(timerInterval)
+        timerInterval = null
+      }
+
       saveState()
     }
   }
 
   const resetTimer = () => {
+    if (timerInterval) {
+      clearInterval(timerInterval)
+      timerInterval = null
+    }
+
     state.value.elapsedTime = 0
     state.value.isRunning = false
     state.value.startTime = null
     saveState()
   }
 
-  const completeTimer = async () => {
-    pauseTimer()
+  const completeTimer = () => {
+    if (timerInterval) {
+      clearInterval(timerInterval)
+      timerInterval = null
+    }
 
     // Сохраняем время в задачу
     if (state.value.taskId) {
       const tasksStore = useTasksStore()
       const elapsedMinutes = Math.floor(state.value.elapsedTime / 60)
+
+      // Добавляем время к задаче
       tasksStore.addTimeToTask(state.value.taskId, elapsedMinutes)
 
-      // Помечаем задачу как выполненную если прошло достаточно времени
-      if (elapsedMinutes >= Math.floor((state.value.totalTime / 60) * 0.8)) {
+      // Если прошло больше 80% времени, отмечаем как выполненную
+      if (elapsedMinutes >= Math.floor(state.value.estimatedMinutes * 0.8)) {
         tasksStore.toggleTaskStatus(state.value.taskId)
       }
     }
@@ -114,19 +175,20 @@ export const useTimerStore = defineStore('timer', () => {
     notifications?.showNotification({
       type: 'success',
       title: 'Таймер завершен!',
-      message: 'Отличная работа! Задача выполнена.',
+      message: `Отличная работа! Задача "${state.value.taskTitle}" выполнена.`,
       icon: 'lucide:check-circle',
-      duration: 3000,
+      duration: 5000,
     })
 
-    // Скрываем таймер
-    hideTimer()
+    // Скрываем таймер через 5 секунд
+    setTimeout(() => {
+      hideTimer()
+    }, 5000)
   }
 
   const hideTimer = () => {
+    pauseTimer()
     state.value.isVisible = false
-    state.value.isRunning = false
-    state.value.startTime = null
     saveState()
   }
 
@@ -163,17 +225,7 @@ export const useTimerStore = defineStore('timer', () => {
     return currentTime.value >= state.value.totalTime
   })
 
-  // Автоматически завершаем таймер когда время истекло
-  watch(
-    isComplete,
-    (complete) => {
-      if (complete && state.value.isRunning) {
-        completeTimer()
-      }
-    },
-    { immediate: true }
-  )
-
+  // Экспортируем состояние
   return {
     state,
     currentTime,
@@ -188,5 +240,6 @@ export const useTimerStore = defineStore('timer', () => {
     hideTimer,
     showTimer,
     saveState,
+    updateElapsedTime,
   }
 })

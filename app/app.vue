@@ -3,7 +3,7 @@
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
-
+    <GlobalNotifications />
     <div class="toast-container">
       <ToastNotification />
     </div>

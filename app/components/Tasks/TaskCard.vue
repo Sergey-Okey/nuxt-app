@@ -76,7 +76,7 @@
       </div>
 
       <!-- Tags -->
-      <div v-if="task.tags.length > 0" class="task-tags">
+      <div v-if="task.tags && task.tags.length > 0" class="task-tags">
         <span v-for="tag in task.tags" :key="tag" class="tag">
           {{ tag }}
         </span>
