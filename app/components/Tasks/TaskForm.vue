@@ -1,256 +1,252 @@
 <template>
-  <div class="task-form">
-    <div class="form-header">
-      <h2>{{ editingTask ? 'Редактировать задачу' : 'Новая задача' }}</h2>
-    </div>
-
-    <form @submit.prevent="handleSubmit">
-      <div class="form-group">
-        <label for="title">Название задачи *</label>
-        <input
-          id="title"
-          v-model="formData.title"
-          type="text"
-          placeholder="Что нужно сделать?"
-          required
-          class="form-input"
-        />
+  <div class="modal-overlay" @click.self="close">
+    <div class="task-form-modal">
+      <div class="modal-header">
+        <h2>{{ isEditing ? 'Редактировать задачу' : 'Новая задача' }}</h2>
+        <button class="close-button" @click="close">
+          <Icon name="lucide:x" size="20" />
+        </button>
       </div>
 
-      <div class="form-group">
-        <label for="description">Описание</label>
-        <textarea
-          id="description"
-          v-model="formData.description"
-          placeholder="Детали задачи..."
-          class="form-input textarea"
-          rows="3"
-        ></textarea>
-      </div>
-
-      <div class="form-row">
+      <form class="task-form" @submit.prevent="save">
+        <!-- Title -->
         <div class="form-group">
-          <label for="category">Категория</label>
-          <div class="select-wrapper">
-            <select
-              id="category"
-              v-model="formData.category"
-              class="form-input select"
+          <label for="title">Название задачи *</label>
+          <input
+            id="title"
+            v-model="formData.title"
+            type="text"
+            placeholder="Что нужно сделать?"
+            required
+          />
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <label for="description">Описание</label>
+          <textarea
+            id="description"
+            v-model="formData.description"
+            placeholder="Детали задачи..."
+            rows="3"
+          ></textarea>
+        </div>
+
+        <!-- Category -->
+        <div class="form-group">
+          <label>Категория</label>
+          <div class="category-options">
+            <button
+              v-for="category in categories"
+              :key="category.id"
+              class="category-option"
+              :class="{ active: formData.category === category.id }"
+              @click="formData.category = category.id"
+              type="button"
             >
-              <option
-                v-for="category in categories"
-                :key="category.id"
-                :value="category.id"
-              >
-                {{ category.name }}
-              </option>
-            </select>
-            <Icon name="lucide:chevron-down" size="16" class="select-icon" />
+              <Icon :name="category.icon" size="16" />
+              <span>{{ category.name }}</span>
+            </button>
           </div>
         </div>
 
+        <!-- Priority -->
         <div class="form-group">
-          <label for="priority">Приоритет</label>
-          <div class="priority-buttons">
+          <label>Приоритет</label>
+          <div class="priority-options">
             <button
               v-for="priority in priorityOptions"
               :key="priority.value"
-              type="button"
-              class="priority-button"
-              :class="{
-                active: formData.priority === priority.value,
-                [priority.value]: true,
-              }"
+              class="priority-option"
+              :class="[
+                priority.value,
+                { active: formData.priority === priority.value },
+              ]"
               @click="formData.priority = priority.value"
+              type="button"
             >
-              {{ priority.label }}
+              <Icon :name="priority.icon" size="16" />
+              <span>{{ priority.label }}</span>
             </button>
           </div>
         </div>
-      </div>
 
-      <div class="form-row">
+        <!-- Due Date -->
         <div class="form-group">
-          <label for="estimatedMinutes">Время (мин)</label>
+          <label>Срок выполнения</label>
+          <input v-model="formData.dueAt" type="datetime-local" :min="today" />
+        </div>
+
+        <!-- Estimated Time -->
+        <div class="form-group">
+          <label>Оценочное время (минуты)</label>
           <input
-            id="estimatedMinutes"
-            v-model="formData.estimatedMinutes"
+            v-model.number="formData.estimatedMinutes"
             type="number"
-            min="5"
-            max="240"
-            step="5"
-            placeholder="60"
-            class="form-input"
+            min="0"
+            placeholder="например, 30"
           />
         </div>
 
+        <!-- Tags -->
         <div class="form-group">
-          <label for="dueAt">Дедлайн</label>
-          <input
-            id="dueAt"
-            v-model="formData.dueAt"
-            type="date"
-            class="form-input"
-          />
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>Теги</label>
-        <div class="tags-input">
-          <div class="tags-list">
-            <span
-              v-for="(tag, index) in formData.tags"
-              :key="index"
-              class="tag"
-            >
+          <label>Теги</label>
+          <div class="tags-input">
+            <div v-for="tag in formData.tags" :key="tag" class="tag">
               {{ tag }}
-              <button
-                type="button"
-                class="tag-remove"
-                @click="removeTag(index)"
-              >
+              <button type="button" @click="removeTag(tag)">
                 <Icon name="lucide:x" size="12" />
               </button>
-            </span>
-          </div>
-          <div class="tag-input-wrapper">
+            </div>
             <input
               v-model="newTag"
               type="text"
-              placeholder="Добавить тег..."
-              class="tag-input"
+              placeholder="Добавить тег"
               @keydown.enter.prevent="addTag"
-              @keydown.delete="handleTagDelete"
             />
-            <button
-              type="button"
-              class="tag-add"
-              @click="addTag"
-              :disabled="!newTag.trim()"
-            >
-              <Icon name="lucide:plus" size="14" />
-            </button>
           </div>
         </div>
-      </div>
 
-      <div class="form-actions">
-        <button type="button" class="cancel-button" @click="$emit('close')">
-          Отмена
-        </button>
-        <button type="submit" class="submit-button">
-          {{ editingTask ? 'Сохранить' : 'Добавить задачу' }}
-        </button>
-      </div>
-    </form>
+        <!-- Form Actions -->
+        <div class="form-actions">
+          <button type="button" class="cancel-button" @click="close">
+            Отмена
+          </button>
+          <button type="submit" class="save-button">
+            {{ isEditing ? 'Сохранить' : 'Создать задачу' }}
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { Task } from '~/stores/tasks'
+const tasksStore = useTasksStore()
 
 interface Props {
-  task?: Task
+  task?: any
+}
+
+interface Emits {
+  (e: 'close'): void
+  (e: 'save', task: any): void
 }
 
 const props = defineProps<Props>()
-const emit = defineEmits(['close', 'success'])
+const emit = defineEmits<Emits>()
 
-const tasksStore = useTasksStore()
-
-// Form data
-const formData = ref({
+// Data
+const formData = reactive({
   title: '',
   description: '',
-  category: 'work',
+  category: 'personal',
   priority: 'medium' as 'low' | 'medium' | 'high',
-  estimatedMinutes: undefined as number | undefined,
-  dueAt: undefined as string | undefined,
+  dueAt: '',
+  estimatedMinutes: 0,
   tags: [] as string[],
 })
 
 const newTag = ref('')
+const today = new Date().toISOString().slice(0, 16)
 
 // Options
-const categories = computed(() => tasksStore.categories)
-
 const priorityOptions = [
-  { value: 'low', label: 'Низкий' },
-  { value: 'medium', label: 'Средний' },
-  { value: 'high', label: 'Высокий' },
+  { value: 'high', label: 'Высокий', icon: 'lucide:alert-circle' },
+  { value: 'medium', label: 'Средний', icon: 'lucide:alert-triangle' },
+  { value: 'low', label: 'Низкий', icon: 'lucide:arrow-down-circle' },
 ]
 
-// Check if editing
-const editingTask = computed(() => !!props.task)
-
-// Initialize form
-onMounted(() => {
-  if (props.task) {
-    formData.value = {
-      title: props.task.title,
-      description: props.task.description || '',
-      category: props.task.category,
-      priority: props.task.priority,
-      estimatedMinutes: props.task.estimatedMinutes,
-      dueAt: props.task.dueAt
-        ? new Date(props.task.dueAt).toISOString().split('T')[0]
-        : undefined,
-      tags: [...props.task.tags],
-    }
-  }
-})
+// Computed
+const categories = computed(() => tasksStore.categories)
+const isEditing = computed(() => !!props.task)
 
 // Methods
+const close = () => {
+  emit('close')
+}
+
+const save = () => {
+  const taskData = {
+    ...formData,
+    dueAt: formData.dueAt ? new Date(formData.dueAt) : undefined,
+    estimatedMinutes: formData.estimatedMinutes || undefined,
+    tags: formData.tags,
+    status: 'active' as const,
+  }
+  emit('save', taskData)
+}
+
 const addTag = () => {
-  const tag = newTag.value.trim()
-  if (tag && !formData.value.tags.includes(tag)) {
-    formData.value.tags.push(tag)
+  if (newTag.value.trim() && !formData.tags.includes(newTag.value.trim())) {
+    formData.tags.push(newTag.value.trim())
     newTag.value = ''
   }
 }
 
-const removeTag = (index: number) => {
-  formData.value.tags.splice(index, 1)
+const removeTag = (tag: string) => {
+  formData.tags = formData.tags.filter((t) => t !== tag)
 }
 
-const handleTagDelete = () => {
-  if (!newTag.value && formData.value.tags.length > 0) {
-    formData.value.tags.pop()
-  }
-}
-
-const handleSubmit = () => {
-  const taskData = {
-    ...formData.value,
-    dueAt: formData.value.dueAt ? new Date(formData.value.dueAt) : undefined,
-    tags: formData.value.tags.filter((tag) => tag.trim()),
-  }
-
+// Initialize form with task data if editing
+watchEffect(() => {
   if (props.task) {
-    // Update existing task
-    tasksStore.updateTask(props.task.id, taskData)
+    Object.assign(formData, {
+      title: props.task.title,
+      description: props.task.description || '',
+      category: props.task.category,
+      priority: props.task.priority,
+      dueAt: props.task.dueAt
+        ? new Date(props.task.dueAt).toISOString().slice(0, 16)
+        : '',
+      estimatedMinutes: props.task.estimatedMinutes || 0,
+      tags: [...props.task.tags],
+    })
   } else {
-    // Create new task
-    tasksStore.addTask({
-      ...taskData,
-      status: 'active',
-      spentMinutes: 0,
+    // Reset form
+    Object.assign(formData, {
+      title: '',
+      description: '',
+      category: 'personal',
+      priority: 'medium',
+      dueAt: '',
+      estimatedMinutes: 0,
+      tags: [],
     })
   }
-
-  emit('success')
-  emit('close')
-}
+})
 </script>
 
 <style scoped lang="scss">
-.task-form {
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: var(--z-modal);
+  @include flex-center;
   padding: var(--space-4);
 }
 
-.form-header {
-  margin-bottom: var(--space-5);
+.task-form-modal {
+  @include card;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--card-bg);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 
   h2 {
     font-size: var(--text-xl);
@@ -260,183 +256,167 @@ const handleSubmit = () => {
   }
 }
 
-.form-group {
-  margin-bottom: var(--space-4);
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
-}
-
-label {
-  display: block;
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--text-secondary);
-  margin-bottom: var(--space-2);
-}
-
-.form-input {
-  width: 100%;
-  padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-base);
-  color: var(--text-primary);
-  font-size: var(--text-base);
-  transition: all var(--duration-base);
-
-  &:focus {
-    outline: none;
-    border-color: var(--accent-primary);
-    background: rgba(93, 95, 239, 0.05);
-  }
-
-  &::placeholder {
-    color: var(--text-muted);
-  }
-
-  &.textarea {
-    resize: vertical;
-    min-height: 60px;
-  }
-
-  &.select {
-    appearance: none;
-    cursor: pointer;
-  }
-}
-
-.select-wrapper {
-  position: relative;
-}
-
-.select-icon {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-secondary);
-  pointer-events: none;
-}
-
-.priority-buttons {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.priority-button {
+.close-button {
   @include button-reset;
-  flex: 1;
-  padding: 8px 12px;
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
+  @include flex-center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-button);
   background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius-base);
+  color: var(--text-secondary);
   transition: all var(--duration-base);
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(248, 113, 113, 0.1);
+    color: var(--error);
+  }
+}
+
+.task-form {
+  padding: var(--space-5);
+}
+
+.form-group {
+  margin-bottom: var(--space-4);
+
+  label {
+    display: block;
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-2);
+  }
+
+  input[type='text'],
+  input[type='number'],
+  input[type='datetime-local'],
+  textarea {
+    width: 100%;
+    padding: var(--space-3);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-button);
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    transition: all var(--duration-base);
+
+    &:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+      box-shadow: var(--glow-primary);
+    }
+
+    &::placeholder {
+      color: var(--text-secondary);
+    }
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 60px;
+  }
+}
+
+.category-options,
+.priority-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--space-2);
+}
+
+.category-option,
+.priority-option {
+  @include button-reset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-button);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  transition: all var(--duration-base);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
   }
 
   &.active {
-    color: white;
+    background: rgba(93, 95, 239, 0.1);
+    color: var(--accent-primary);
+    font-weight: var(--font-medium);
 
-    &.low {
-      background: var(--success);
+    :deep(svg) {
+      color: var(--accent-primary);
     }
+  }
+}
 
-    &.medium {
-      background: var(--warning);
-      color: var(--primary-bg);
-    }
+.priority-option {
+  &.high.active {
+    background: rgba(248, 113, 113, 0.1);
+    color: var(--error);
+  }
 
-    &.high {
-      background: var(--error);
-    }
+  &.medium.active {
+    background: rgba(250, 204, 21, 0.1);
+    color: var(--warning);
+  }
+
+  &.low.active {
+    background: rgba(93, 242, 126, 0.1);
+    color: var(--success);
   }
 }
 
 .tags-input {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-base);
-  padding: var(--space-2);
-}
-
-.tags-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: var(--space-2);
-}
-
-.tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  background: rgba(93, 95, 239, 0.1);
-  color: var(--accent-primary);
-  border-radius: 12px;
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-}
-
-.tag-remove {
-  @include button-reset;
-  @include flex-center;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-secondary);
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.2);
-  }
-}
-
-.tag-input-wrapper {
-  display: flex;
-  align-items: center;
   gap: var(--space-2);
-}
+  padding: var(--space-2);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-button);
 
-.tag-input {
-  flex: 1;
-  padding: 6px 0;
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  font-size: var(--text-sm);
+  .tag {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
+    background: rgba(93, 95, 239, 0.1);
+    color: var(--accent-primary);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
 
-  &:focus {
-    outline: none;
+    button {
+      @include button-reset;
+      @include flex-center;
+      width: 14px;
+      height: 14px;
+      color: inherit;
+      opacity: 0.7;
+      transition: all var(--duration-base);
+
+      &:hover {
+        opacity: 1;
+      }
+    }
   }
-}
 
-.tag-add {
-  @include button-reset;
-  @include flex-center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  background: var(--accent-primary);
-  color: white;
-  transition: all var(--duration-base);
+  input {
+    flex: 1;
+    min-width: 100px;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    padding: var(--space-1);
 
-  &:hover:not(:disabled) {
-    background: var(--accent-secondary);
-    transform: scale(1.1);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+    &:focus {
+      outline: none;
+    }
   }
 }
 
@@ -444,32 +424,33 @@ label {
   display: flex;
   gap: var(--space-3);
   margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cancel-button,
+.save-button {
+  @include button-reset;
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-button);
+  font-weight: var(--font-medium);
+  transition: all var(--duration-base);
 }
 
 .cancel-button {
-  @include button-reset;
-  flex: 1;
-  padding: 12px;
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-secondary);
-  border-radius: var(--radius-button);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-base);
 
   &:hover {
     background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
   }
 }
 
-.submit-button {
-  @include button-reset;
-  flex: 1;
-  padding: 12px;
+.save-button {
   background: var(--accent-primary);
   color: white;
-  border-radius: var(--radius-button);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-base);
 
   &:hover {
     background: var(--accent-secondary);

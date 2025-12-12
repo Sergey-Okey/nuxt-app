@@ -2,7 +2,6 @@
   <div class="layout">
     <!-- Fixed Header -->
     <AppHeader />
-
     <!-- Main Content Area - pages will be rendered here -->
     <main class="layout-main">
       <slot />
