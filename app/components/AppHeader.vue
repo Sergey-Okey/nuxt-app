@@ -115,7 +115,7 @@ const goToProfile = () => {
   left: 0;
   right: 0;
   z-index: var(--z-sticky);
-  padding: 0 var(--space-4);
+  padding: 0 var(--space-1);
   transition: top 0.3s ease;
 
   &.header-scrolled {

@@ -1,443 +1,245 @@
 import { defineStore } from 'pinia'
 
-export interface PomodoroSession {
-  id: string
-  taskId?: string
-  startAt: Date
-  endAt?: Date
-  phase: 'work' | 'short_break' | 'long_break'
+interface TimerState {
+  taskId: string | null
+  taskTitle: string
+  elapsedTime: number
+  totalTime: number
+  isRunning: boolean
+  isVisible: boolean
+  startTime: number | null
+  estimatedMinutes: number
 }
 
-export const useTimerStore = defineStore('timer', {
-  state: () => ({
+export const useTimerStore = defineStore('timer', () => {
+  // Состояние таймера
+  const state = ref<TimerState>({
+    taskId: null,
+    taskTitle: '',
+    elapsedTime: 0,
+    totalTime: 25 * 60,
     isRunning: false,
-    timeLeft: 25 * 60, // 25 минут в секундах
-    currentPhase: 'work' as 'work' | 'short_break' | 'long_break',
-    sessions: [] as PomodoroSession[],
-    currentTaskId: null as string | null,
-    currentSession: null as PomodoroSession | null,
+    isVisible: false,
+    startTime: null,
+    estimatedMinutes: 25,
+  })
 
-    settings: {
-      work: 25 * 60,
-      shortBreak: 5 * 60,
-      longBreak: 15 * 60,
-      sessionsBeforeLongBreak: 4,
-    },
-  }),
+  let timerInterval: NodeJS.Timeout | null = null
 
-  getters: {
-    formattedTime: (state) => {
-      const minutes = Math.floor(state.timeLeft / 60)
-      const seconds = state.timeLeft % 60
-      return `${minutes.toString().padStart(2, '0')}:${seconds
-        .toString()
-        .padStart(2, '0')}`
-    },
-
-    progress: (state) => {
-      const total = state.settings[state.currentPhase]
-      return ((total - state.timeLeft) / total) * 100
-    },
-
-    currentTask: (state) => {
-      if (state.currentTaskId) {
-        const tasksStore = useTasksStore()
-        return tasksStore.tasks.find((task) => task.id === state.currentTaskId)
+  // Загружаем состояние из localStorage
+  const loadState = () => {
+    const saved = localStorage.getItem('timerState')
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        // Восстанавливаем только если не прошло больше 24 часов
+        if (parsed.startTime && Date.now() - parsed.startTime < 86400000) {
+          state.value = {
+            ...parsed,
+            isRunning: false, // Всегда сбрасываем running при загрузке
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load timer state:', e)
       }
-      return null
-    },
+    }
+  }
 
-    todaysSessions: (state) => {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
+  // Сохраняем состояние
+  const saveState = () => {
+    localStorage.setItem('timerState', JSON.stringify(state.value))
+  }
 
-      return state.sessions.filter((session) => {
-        const sessionDate = new Date(session.startAt)
-        sessionDate.setHours(0, 0, 0, 0)
-        return sessionDate.getTime() === today.getTime()
-      })
-    },
+  // Инициализация
+  onMounted(() => {
+    loadState()
+    // Запускаем автоматическое сохранение каждые 30 секунд
+    setInterval(saveState, 30000)
+  })
 
-    totalFocusTimeToday: (state) => {
-      const todaysWorkSessions = state.todaysSessions.filter(
-        (session) => session.phase === 'work'
+  // Обновляем время в реальном времени
+  const updateElapsedTime = () => {
+    if (state.value.isRunning && state.value.startTime) {
+      const currentElapsed = Math.floor(
+        (Date.now() - state.value.startTime) / 1000
       )
+      state.value.elapsedTime += currentElapsed
+      state.value.startTime = Date.now()
+      saveState()
+    }
+  }
 
-      return todaysWorkSessions.reduce((total, session) => {
-        if (session.endAt) {
-          const start = new Date(session.startAt).getTime()
-          const end = new Date(session.endAt).getTime()
-          return total + Math.round((end - start) / 60000) // в минутах
-        }
-        return total
-      }, 0)
-    },
-  },
+  // Начинаем таймер для задачи
+  const startForTask = (task: any, estimatedMinutes?: number) => {
+    updateElapsedTime()
 
-  actions: {
-    // Инициализация из localStorage
-    initialize() {
-      if (process.client) {
-        const savedTimer = localStorage.getItem('taskflow-timer')
-        if (savedTimer) {
-          try {
-            const parsed = JSON.parse(savedTimer)
-            this.isRunning = parsed.isRunning
-            this.timeLeft = parsed.timeLeft
-            this.currentPhase = parsed.currentPhase
-            this.currentTaskId = parsed.currentTaskId
-            this.sessions =
-              parsed.sessions?.map((session: any) => ({
-                ...session,
-                startAt: new Date(session.startAt),
-                endAt: session.endAt ? new Date(session.endAt) : undefined,
-              })) || []
+    const minutes = estimatedMinutes || task.estimatedMinutes || 25
 
-            // Если нет сессий, добавляем демо-данные
-            if (this.sessions.length === 0) {
-              this.addSampleSessions()
-            }
-          } catch (error) {
-            console.error('Error loading timer from localStorage:', error)
-            // Добавляем демо-данные если загрузка не удалась
-            this.addSampleSessions()
-          }
-        } else {
-          // Добавляем демо-данные для нового пользователя
-          this.addSampleSessions()
-        }
-      }
-    },
+    state.value = {
+      taskId: task.id,
+      taskTitle: task.title,
+      elapsedTime: 0,
+      totalTime: minutes * 60,
+      isRunning: true,
+      isVisible: true,
+      startTime: Date.now(),
+      estimatedMinutes: minutes,
+    }
 
-    // Сохранение в localStorage
-    saveToLocalStorage() {
-      if (process.client) {
-        localStorage.setItem(
-          'taskflow-timer',
-          JSON.stringify({
-            isRunning: this.isRunning,
-            timeLeft: this.timeLeft,
-            currentPhase: this.currentPhase,
-            currentTaskId: this.currentTaskId,
-            sessions: this.sessions,
-          })
-        )
-      }
-    },
+    startTimerInterval()
+    saveState()
 
-    // Добавление демо-сессий
-    addSampleSessions() {
-      const today = new Date()
-      const yesterday = new Date(today)
-      yesterday.setDate(yesterday.getDate() - 1)
+    // Показываем уведомление
+    const notifications = inject('notifications') as any
+    notifications?.showNotification({
+      type: 'info',
+      title: 'Таймер запущен',
+      message: `Начали отсчет для задачи "${task.title}"`,
+      icon: 'lucide:play',
+      duration: 3000,
+    })
+  }
 
-      // Сессии за сегодня
-      const todaySessions = [
-        {
-          id: '1',
-          taskId: 'sample-1',
-          startAt: new Date(
-            today.getFullYear(),
-            today.getMonth(),
-            today.getDate(),
-            9,
-            0
-          ),
-          endAt: new Date(
-            today.getFullYear(),
-            today.getMonth(),
-            today.getDate(),
-            9,
-            25
-          ),
-          phase: 'work' as const,
-        },
-        {
-          id: '2',
-          taskId: 'sample-2',
-          startAt: new Date(
-            today.getFullYear(),
-            today.getMonth(),
-            today.getDate(),
-            10,
-            0
-          ),
-          endAt: new Date(
-            today.getFullYear(),
-            today.getMonth(),
-            today.getDate(),
-            10,
-            25
-          ),
-          phase: 'work' as const,
-        },
-        {
-          id: '3',
-          taskId: 'sample-3',
-          startAt: new Date(
-            today.getFullYear(),
-            today.getMonth(),
-            today.getDate(),
-            14,
-            30
-          ),
-          endAt: new Date(
-            today.getFullYear(),
-            today.getMonth(),
-            today.getDate(),
-            14,
-            55
-          ),
-          phase: 'work' as const,
-        },
-      ]
+  // Продолжаем существующий таймер
+  const continueTimer = () => {
+    if (!state.value.taskId || state.value.isRunning) return
 
-      // Сессии за вчера
-      const yesterdaySessions = [
-        {
-          id: '4',
-          taskId: 'sample-4',
-          startAt: new Date(
-            yesterday.getFullYear(),
-            yesterday.getMonth(),
-            yesterday.getDate(),
-            10,
-            0
-          ),
-          endAt: new Date(
-            yesterday.getFullYear(),
-            yesterday.getMonth(),
-            yesterday.getDate(),
-            10,
-            25
-          ),
-          phase: 'work' as const,
-        },
-        {
-          id: '5',
-          taskId: 'sample-5',
-          startAt: new Date(
-            yesterday.getFullYear(),
-            yesterday.getMonth(),
-            yesterday.getDate(),
-            11,
-            0
-          ),
-          endAt: new Date(
-            yesterday.getFullYear(),
-            yesterday.getMonth(),
-            yesterday.getDate(),
-            11,
-            25
-          ),
-          phase: 'work' as const,
-        },
-        {
-          id: '6',
-          taskId: 'sample-6',
-          startAt: new Date(
-            yesterday.getFullYear(),
-            yesterday.getMonth(),
-            yesterday.getDate(),
-            15,
-            0
-          ),
-          endAt: new Date(
-            yesterday.getFullYear(),
-            yesterday.getMonth(),
-            yesterday.getDate(),
-            15,
-            25
-          ),
-          phase: 'work' as const,
-        },
-      ]
+    state.value.isRunning = true
+    state.value.startTime = Date.now()
+    startTimerInterval()
+    saveState()
+  }
 
-      this.sessions = [...todaySessions, ...yesterdaySessions]
-      this.saveToLocalStorage()
-    },
+  const startTimerInterval = () => {
+    if (timerInterval) clearInterval(timerInterval)
 
-    // Установка задачи для таймера
-    setTask(taskId: string | null) {
-      this.currentTaskId = taskId
-      this.saveToLocalStorage()
-    },
-
-    // Запуск таймера
-    startTimer() {
-      if (!this.isRunning) {
-        this.isRunning = true
-
-        // Создаем новую сессию
-        this.currentSession = {
-          id: Date.now().toString(),
-          startAt: new Date(),
-          phase: this.currentPhase,
-          taskId: this.currentTaskId || undefined,
-        }
-
-        this.saveToLocalStorage()
-
-        // Запускаем интервал
-        const timerInterval = setInterval(() => {
-          if (this.isRunning && this.timeLeft > 0) {
-            this.timeLeft--
-            this.saveToLocalStorage()
-          } else if (this.isRunning && this.timeLeft === 0) {
-            clearInterval(timerInterval)
-            this.completePhase()
-          }
-        }, 1000)
-
-        // Сохраняем ID интервала для очистки
-        if (process.client) {
-          ;(window as any).timerInterval = timerInterval
+    timerInterval = setInterval(() => {
+      if (state.value.isRunning) {
+        const currentTime = currentTime.value
+        if (currentTime >= state.value.totalTime) {
+          completeTimer()
         }
       }
-    },
+    }, 1000)
+  }
 
-    // Пауза таймера
-    pauseTimer() {
-      this.isRunning = false
+  const pauseTimer = () => {
+    if (state.value.isRunning) {
+      updateElapsedTime()
+      state.value.isRunning = false
+      state.value.startTime = null
 
-      // Очищаем интервал
-      if (process.client && (window as any).timerInterval) {
-        clearInterval((window as any).timerInterval)
-        ;(window as any).timerInterval = null
+      if (timerInterval) {
+        clearInterval(timerInterval)
+        timerInterval = null
       }
 
-      this.saveToLocalStorage()
-    },
+      saveState()
+    }
+  }
 
-    // Сброс таймера
-    resetTimer() {
-      this.isRunning = false
-      this.timeLeft = this.settings[this.currentPhase]
-      this.currentSession = null
+  const resetTimer = () => {
+    if (timerInterval) {
+      clearInterval(timerInterval)
+      timerInterval = null
+    }
 
-      // Очищаем интервал
-      if (process.client && (window as any).timerInterval) {
-        clearInterval((window as any).timerInterval)
-        ;(window as any).timerInterval = null
+    state.value.elapsedTime = 0
+    state.value.isRunning = false
+    state.value.startTime = null
+    saveState()
+  }
+
+  const completeTimer = () => {
+    if (timerInterval) {
+      clearInterval(timerInterval)
+      timerInterval = null
+    }
+
+    // Сохраняем время в задачу
+    if (state.value.taskId) {
+      const tasksStore = useTasksStore()
+      const elapsedMinutes = Math.floor(state.value.elapsedTime / 60)
+
+      // Добавляем время к задаче
+      tasksStore.addTimeToTask(state.value.taskId, elapsedMinutes)
+
+      // Если прошло больше 80% времени, отмечаем как выполненную
+      if (elapsedMinutes >= Math.floor(state.value.estimatedMinutes * 0.8)) {
+        tasksStore.toggleTaskStatus(state.value.taskId)
       }
+    }
 
-      this.saveToLocalStorage()
-    },
+    // Показываем уведомление
+    const notifications = inject('notifications') as any
+    notifications?.showNotification({
+      type: 'success',
+      title: 'Таймер завершен!',
+      message: `Отличная работа! Задача "${state.value.taskTitle}" выполнена.`,
+      icon: 'lucide:check-circle',
+      duration: 5000,
+    })
 
-    // Завершение фазы
-    completePhase() {
-      this.isRunning = false
+    // Скрываем таймер через 5 секунд
+    setTimeout(() => {
+      hideTimer()
+    }, 5000)
+  }
 
-      // Очищаем интервал
-      if (process.client && (window as any).timerInterval) {
-        clearInterval((window as any).timerInterval)
-        ;(window as any).timerInterval = null
-      }
+  const hideTimer = () => {
+    pauseTimer()
+    state.value.isVisible = false
+    saveState()
+  }
 
-      if (this.currentSession) {
-        this.currentSession.endAt = new Date()
-        this.sessions.push(this.currentSession)
+  const showTimer = () => {
+    state.value.isVisible = true
+    saveState()
+  }
 
-        // Добавляем время к задаче
-        if (this.currentSession.taskId) {
-          const tasksStore = useTasksStore()
-          const timeSpent = Math.round(
-            (this.currentSession.endAt.getTime() -
-              this.currentSession.startAt.getTime()) /
-              60000
-          )
-          tasksStore.addTimeToTask(this.currentSession.taskId, timeSpent)
-        }
-      }
+  // Текущее время таймера
+  const currentTime = computed(() => {
+    if (state.value.isRunning && state.value.startTime) {
+      const additionalTime = Math.floor(
+        (Date.now() - state.value.startTime) / 1000
+      )
+      return state.value.elapsedTime + additionalTime
+    }
+    return state.value.elapsedTime
+  })
 
-      // Переход к следующей фазе
-      if (this.currentPhase === 'work') {
-        const completedWorkSessions = this.sessions.filter(
-          (s) => s.phase === 'work'
-        ).length
-        this.currentPhase =
-          completedWorkSessions % this.settings.sessionsBeforeLongBreak === 0
-            ? 'long_break'
-            : 'short_break'
-      } else {
-        this.currentPhase = 'work'
-      }
+  const formattedTime = computed(() => {
+    const totalSeconds = Math.min(currentTime.value, state.value.totalTime)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    return `${minutes.toString().padStart(2, '0')}:${seconds
+      .toString()
+      .padStart(2, '0')}`
+  })
 
-      this.timeLeft = this.settings[this.currentPhase]
-      this.currentSession = null
-      this.saveToLocalStorage()
+  const progress = computed(() => {
+    return Math.min(100, (currentTime.value / state.value.totalTime) * 100)
+  })
 
-      // Уведомление
-      this.showNotification()
-    },
+  const isComplete = computed(() => {
+    return currentTime.value >= state.value.totalTime
+  })
 
-    // Показать уведомление
-    showNotification() {
-      if (process.client && 'Notification' in window) {
-        if (Notification.permission === 'granted') {
-          const phaseName = {
-            work: 'Работа',
-            short_break: 'Короткий перерыв',
-            long_break: 'Длинный перерыв',
-          }[this.currentPhase]
-
-          new Notification(`TaskFlow: ${phaseName}`, {
-            body:
-              this.currentPhase === 'work'
-                ? 'Время поработать!'
-                : 'Время отдохнуть!',
-            icon: '/icon.png',
-          })
-        } else if (Notification.permission !== 'denied') {
-          Notification.requestPermission().then((permission) => {
-            if (permission === 'granted') {
-              this.showNotification()
-            }
-          })
-        }
-      }
-    },
-
-    // Настройка времени
-    setWorkTime(minutes: number) {
-      this.settings.work = minutes * 60
-      if (this.currentPhase === 'work' && !this.isRunning) {
-        this.timeLeft = this.settings.work
-      }
-      this.saveToLocalStorage()
-    },
-
-    setBreakTime(type: 'shortBreak' | 'longBreak', minutes: number) {
-      this.settings[type] = minutes * 60
-      if (this.currentPhase === type && !this.isRunning) {
-        this.timeLeft = this.settings[type]
-      }
-      this.saveToLocalStorage()
-    },
-
-    // Смена фазы вручную
-    switchPhase(phase: 'work' | 'short_break' | 'long_break') {
-      if (!this.isRunning) {
-        this.currentPhase = phase
-        this.timeLeft = this.settings[phase]
-        this.saveToLocalStorage()
-      }
-    },
-
-    // Добавление сессии вручную (для тестирования)
-    addSession(session: Omit<PomodoroSession, 'id'>) {
-      const newSession: PomodoroSession = {
-        ...session,
-        id: Date.now().toString(),
-      }
-      this.sessions.push(newSession)
-      this.saveToLocalStorage()
-    },
-
-    // Очистка всех сессий
-    clearSessions() {
-      this.sessions = []
-      this.saveToLocalStorage()
-    },
-  },
+  // Экспортируем состояние
+  return {
+    state,
+    currentTime,
+    formattedTime,
+    progress,
+    isComplete,
+    startForTask,
+    continueTimer,
+    pauseTimer,
+    resetTimer,
+    completeTimer,
+    hideTimer,
+    showTimer,
+    saveState,
+    updateElapsedTime,
+  }
 })
