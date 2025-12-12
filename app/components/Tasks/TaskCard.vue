@@ -1,6 +1,6 @@
 <template>
   <div class="task-card" :class="cardClasses">
-    <!-- Header -->
+    <!-- Header with actions -->
     <div class="card-header">
       <div class="task-main-info">
         <button class="status-toggle" @click="$emit('toggle-status')">
@@ -17,13 +17,24 @@
         <div class="task-title-section">
           <h3 class="task-title">{{ task.title }}</h3>
           <div class="task-category" :style="{ color: categoryColor }">
-            <Icon :name="categoryIcon" size="12" />
-            <span>{{ categoryName }}</span>
+            <span class="category-icon">{{ categoryIcon }}</span>
+            <span class="category-name">{{ categoryName }}</span>
           </div>
         </div>
       </div>
 
       <div class="task-actions">
+        <button
+          v-if="task.status === 'active'"
+          class="action-button timer"
+          @click="toggleTimer"
+          :title="timerRunning ? 'Остановить таймер' : 'Запустить таймер'"
+        >
+          <Icon
+            :name="timerRunning ? 'lucide:pause' : 'lucide:play'"
+            size="16"
+          />
+        </button>
         <button
           class="action-button edit"
           @click="$emit('edit')"
@@ -46,80 +57,46 @@
       <p>{{ task.description }}</p>
     </div>
 
-    <!-- Progress Bar -->
-    <div class="progress-section" v-if="showProgress">
-      <div class="progress-header">
-        <span class="progress-label">Прогресс</span>
-        <span class="progress-value">{{ progressPercentage }}%</span>
-      </div>
-      <div class="progress-bar">
-        <div
-          class="progress-fill"
-          :style="{ width: `${progressPercentage}%` }"
-        ></div>
-        <div class="progress-dots">
-          <div
-            v-for="dot in 10"
-            :key="dot"
-            class="progress-dot"
-            :class="{ active: dot <= Math.floor(progressPercentage / 10) }"
-          ></div>
-        </div>
-      </div>
-      <div class="time-info">
-        <span class="time-spent"
-          >Затрачено: {{ formatTime(task.spentMinutes || 0) }}</span
+    <!-- Subtasks (placeholder) -->
+    <div v-if="hasSubtasks" class="task-subtasks">
+      <div class="subtasks-header">
+        <Icon name="lucide:list-checks" size="14" />
+        <span>Подзадачи</span>
+        <span class="subtasks-count"
+          >{{ completedSubtasks }}/{{ totalSubtasks }}</span
         >
-        <span v-if="task.estimatedMinutes" class="time-remaining">
-          Осталось:
-          {{
-            formatTime(
-              Math.max(
-                0,
-                (task.estimatedMinutes || 0) - (task.spentMinutes || 0)
-              )
-            )
-          }}
-        </span>
+      </div>
+      <div class="subtasks-list">
+        <div v-for="subtask in subtasks" :key="subtask.id" class="subtask-item">
+          <button class="subtask-toggle" @click="toggleSubtask(subtask.id)">
+            <Icon
+              :name="
+                subtask.completed ? 'lucide:check-square' : 'lucide:square'
+              "
+              size="14"
+            />
+          </button>
+          <span class="subtask-title" :class="{ completed: subtask.completed }">
+            {{ subtask.title }}
+          </span>
+        </div>
       </div>
     </div>
 
-    <!-- Timer Section -->
-    <div class="timer-section" v-if="task.status === 'active'">
-      <div class="timer-header">
-        <Icon name="lucide:clock" size="14" />
-        <span>Таймер</span>
-      </div>
-      <div class="timer-controls">
-        <button
-          class="timer-button"
-          :class="{ active: isTimerActiveForTask }"
-          @click.stop="toggleTaskTimer"
-        >
-          <Icon
-            :name="isTimerActiveForTask ? 'lucide:pause' : 'lucide:play'"
-            size="14"
-          />
-          <span>{{ isTimerActiveForTask ? 'Пауза' : 'Старт' }}</span>
-        </button>
+    <!-- Timer -->
+    <TaskTimer
+      v-if="showTimer"
+      ref="timerRef"
+      :task-id="task.id"
+      :initial-time="25 * 60"
+      @complete="onTimerComplete"
+    />
 
-        <button
-          class="timer-reset"
-          @click.stop="resetTaskTimer"
-          title="Сбросить таймер"
-        >
-          <Icon name="lucide:rotate-ccw" size="14" />
-        </button>
-
-        <div class="timer-display" v-if="isTimerActiveForTask">
-          <span class="timer-time">{{ timerFormattedTime }}</span>
-          <div class="timer-progress">
-            <div
-              class="timer-progress-fill"
-              :style="{ width: `${timerProgress}%` }"
-            ></div>
-          </div>
-        </div>
+    <!-- Tags -->
+    <div v-if="task.tags.length > 0" class="task-tags">
+      <div v-for="tag in task.tags" :key="tag" class="tag">
+        <Icon name="lucide:tag" size="10" />
+        <span>{{ tag }}</span>
       </div>
     </div>
 
@@ -131,32 +108,33 @@
           <span>{{ priorityLabel }}</span>
         </div>
 
-        <div v-if="task.dueAt" class="due-date">
+        <div v-if="task.dueAt" class="due-date" :class="{ overdue: isOverdue }">
           <Icon name="lucide:calendar" size="12" />
           <span>{{ formatDueDate(task.dueAt) }}</span>
         </div>
       </div>
 
       <div class="footer-right">
-        <div class="task-time-spent">
-          <Icon name="lucide:clock" size="12" />
-          <span>{{ formatTime(task.spentMinutes || 0) }}</span>
+        <div class="task-meta">
+          <div
+            class="time-spent"
+            v-if="task.spentMinutes && task.spentMinutes > 0"
+          >
+            <Icon name="lucide:clock" size="12" />
+            <span>{{ formatTime(task.spentMinutes) }}</span>
+          </div>
+          <div class="task-created" v-if="showCreatedDate">
+            <Icon name="lucide:calendar-plus" size="12" />
+            <span>{{ formatDate(task.createdAt) }}</span>
+          </div>
         </div>
-      </div>
-    </div>
-
-    <!-- Tags -->
-    <div v-if="task.tags.length > 0" class="task-tags">
-      <div v-for="tag in task.tags" :key="tag" class="tag">
-        <Icon name="lucide:tag" size="10" />
-        <span>{{ tag }}</span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 interface Props {
   task: {
@@ -175,14 +153,22 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const emit = defineEmits(['toggle-status', 'start-timer', 'edit', 'delete'])
+const emit = defineEmits(['toggle-status', 'edit', 'delete', 'timer-start'])
 
-// Stores
-const tasksStore = useTasksStore()
-const timerStore = useTimerStore()
+// Refs
+const timerRef = ref()
+const timerRunning = ref(false)
+
+// Subtasks (заглушка для будущей реализации)
+const subtasks = ref([
+  { id: '1', title: 'Исследовать тему', completed: true },
+  { id: '2', title: 'Набросать план', completed: true },
+  { id: '3', title: 'Реализовать функционал', completed: false },
+])
 
 // Computed
 const categoryInfo = computed(() => {
+  const tasksStore = useTasksStore()
   return tasksStore.getCategoryById(props.task.category)
 })
 
@@ -191,7 +177,7 @@ const categoryName = computed(() => {
 })
 
 const categoryIcon = computed(() => {
-  return categoryInfo.value?.icon || 'lucide:folder'
+  return categoryInfo.value?.icon || '📁'
 })
 
 const categoryColor = computed(() => {
@@ -201,6 +187,7 @@ const categoryColor = computed(() => {
 const cardClasses = computed(() => ({
   completed: props.task.status === 'completed',
   [`priority-${props.task.priority}`]: true,
+  'has-timer': showTimer.value,
 }))
 
 const priorityLabel = computed(() => {
@@ -213,34 +200,41 @@ const priorityLabel = computed(() => {
 })
 
 const priorityIcon = computed(() => {
-  return 'lucide:flag'
+  const icons = {
+    high: 'lucide:flag',
+    medium: 'lucide:flag',
+    low: 'lucide:flag',
+  }
+  return icons[props.task.priority]
 })
 
-const showProgress = computed(() => {
-  return props.task.status === 'active' && props.task.estimatedMinutes
+const showTimer = computed(() => {
+  return props.task.status === 'active' && timerRunning.value
 })
 
-const progressPercentage = computed(() => {
-  if (!props.task.estimatedMinutes || !props.task.spentMinutes) return 0
-  return Math.min(
-    100,
-    Math.round((props.task.spentMinutes / props.task.estimatedMinutes) * 100)
+const hasSubtasks = computed(() => {
+  return subtasks.value.length > 0
+})
+
+const totalSubtasks = computed(() => {
+  return subtasks.value.length
+})
+
+const completedSubtasks = computed(() => {
+  return subtasks.value.filter((s) => s.completed).length
+})
+
+const isOverdue = computed(() => {
+  if (!props.task.dueAt) return false
+  return (
+    new Date(props.task.dueAt) < new Date() && props.task.status === 'active'
   )
 })
 
-// Timer related
-const isTimerActiveForTask = computed(() => {
-  return timerStore.isRunning && timerStore.currentTaskId === props.task.id
-})
-
-const timerFormattedTime = computed(() => {
-  if (!isTimerActiveForTask.value) return '25:00'
-  return timerStore.formattedTime
-})
-
-const timerProgress = computed(() => {
-  if (!isTimerActiveForTask.value) return 0
-  return timerStore.progress
+const showCreatedDate = computed(() => {
+  const created = new Date(props.task.createdAt)
+  const today = new Date()
+  return created.toDateString() !== today.toDateString()
 })
 
 // Methods
@@ -259,11 +253,15 @@ const formatDueDate = (date: Date) => {
   const today = new Date()
   const tomorrow = new Date(today)
   tomorrow.setDate(tomorrow.getDate() + 1)
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
 
   if (dueDate.toDateString() === today.toDateString()) {
     return 'Сегодня'
   } else if (dueDate.toDateString() === tomorrow.toDateString()) {
     return 'Завтра'
+  } else if (dueDate.toDateString() === yesterday.toDateString()) {
+    return 'Вчера'
   }
 
   return dueDate.toLocaleDateString('ru-RU', {
@@ -272,33 +270,40 @@ const formatDueDate = (date: Date) => {
   })
 }
 
-const toggleTaskTimer = () => {
-  if (isTimerActiveForTask.value) {
-    timerStore.pauseTimer()
-  } else {
-    // Если другой таймер активен, останавливаем его
-    if (timerStore.isRunning) {
-      timerStore.pauseTimer()
-    }
+const formatDate = (date: Date) => {
+  return new Date(date).toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+  })
+}
 
-    // Устанавливаем текущую задачу и запускаем таймер
-    timerStore.setTask(props.task.id)
-    timerStore.startTimer()
+const toggleTimer = () => {
+  timerRunning.value = !timerRunning.value
+  emit('timer-start', props.task.id)
+}
 
-    emit('start-timer')
+const onTimerComplete = () => {
+  timerRunning.value = false
+  // Здесь можно добавить логику обновления времени задачи
+}
+
+const toggleSubtask = (id: string) => {
+  const subtask = subtasks.value.find((s) => s.id === id)
+  if (subtask) {
+    subtask.completed = !subtask.completed
   }
 }
 
-const resetTaskTimer = () => {
-  if (isTimerActiveForTask.value) {
-    timerStore.resetTimer()
-    timerStore.setTask(null)
-  }
-}
-
-// Инициализация таймера при монтировании
-onMounted(() => {
-  timerStore.initialize()
+// Expose timer methods
+defineExpose({
+  startTimer: () => {
+    timerRunning.value = true
+    timerRef.value?.startTimer()
+  },
+  pauseTimer: () => {
+    timerRunning.value = false
+    timerRef.value?.pauseTimer()
+  },
 })
 </script>
 
@@ -336,6 +341,10 @@ onMounted(() => {
 
   &.priority-low {
     border-left: 4px solid var(--success);
+  }
+
+  &.has-timer {
+    border-color: rgba(93, 95, 239, 0.2);
   }
 }
 
@@ -393,11 +402,15 @@ onMounted(() => {
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
   background: rgba(255, 255, 255, 0.05);
-  padding: var(--space-1) var(--space-2);
+  padding: 4px 8px;
   border-radius: var(--radius-sm);
 
-  :deep(svg) {
-    opacity: 0.8;
+  .category-icon {
+    font-size: 14px;
+  }
+
+  .category-name {
+    opacity: 0.9;
   }
 }
 
@@ -409,11 +422,16 @@ onMounted(() => {
 .action-button {
   @include button-reset;
   @include flex-center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   transition: all var(--duration-base);
+
+  &.timer:hover {
+    background: rgba(93, 95, 239, 0.1);
+    color: var(--accent-primary);
+  }
 
   &.edit:hover {
     background: rgba(93, 95, 239, 0.1);
@@ -440,199 +458,103 @@ onMounted(() => {
   }
 }
 
-.progress-section {
+.task-subtasks {
   margin-bottom: var(--space-4);
   padding: var(--space-3);
   background: rgba(255, 255, 255, 0.03);
   border-radius: var(--radius-base);
 }
 
-.progress-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-2);
-}
-
-.progress-label {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  font-weight: var(--font-medium);
-}
-
-.progress-value {
-  font-size: var(--text-sm);
-  font-weight: var(--font-bold);
-  color: var(--accent-primary);
-}
-
-.progress-bar {
-  position: relative;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-  margin-bottom: var(--space-2);
-  overflow: hidden;
-}
-
-.progress-fill {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  background: var(--gradient-primary);
-  border-radius: 3px;
-  transition: width var(--duration-slow);
-  z-index: 1;
-}
-
-.progress-dots {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  justify-content: space-between;
-  padding: 0 2px;
-  z-index: 2;
-}
-
-.progress-dot {
-  width: 2px;
-  height: 6px;
-  background: var(--card-bg);
-  transition: all var(--duration-base);
-
-  &.active {
-    background: white;
-  }
-}
-
-.time-info {
-  display: flex;
-  justify-content: space-between;
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-}
-
-.time-spent {
-  color: var(--success);
-  font-weight: var(--font-medium);
-}
-
-.time-remaining {
-  color: var(--accent-primary);
-  font-weight: var(--font-medium);
-}
-
-// Timer Section
-.timer-section {
-  margin-bottom: var(--space-4);
-  padding: var(--space-3);
-  background: rgba(93, 95, 239, 0.05);
-  border: 1px solid rgba(93, 95, 239, 0.1);
-  border-radius: var(--radius-base);
-}
-
-.timer-header {
+.subtasks-header {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   font-size: var(--text-xs);
-  color: var(--accent-primary);
+  color: var(--text-secondary);
   font-weight: var(--font-medium);
   margin-bottom: var(--space-2);
 
   :deep(svg) {
+    color: var(--text-secondary);
+  }
+}
+
+.subtasks-count {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  font-weight: var(--font-medium);
+}
+
+.subtasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.subtask-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+}
+
+.subtask-toggle {
+  @include button-reset;
+  @include flex-center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+
+  :deep(svg) {
+    color: var(--text-secondary);
+    transition: all var(--duration-base);
+  }
+
+  &:hover :deep(svg) {
     color: var(--accent-primary);
   }
 }
 
-.timer-controls {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.timer-button {
-  @include button-reset;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  background: var(--accent-primary);
-  color: white;
-  border-radius: var(--radius-button);
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-  transition: all var(--duration-base);
-  flex-shrink: 0;
-
-  &:hover {
-    background: var(--accent-secondary);
-    transform: scale(1.05);
-  }
-
-  &.active {
-    background: var(--warning);
-
-    &:hover {
-      background: #eab308;
-    }
-  }
-}
-
-.timer-reset {
-  @include button-reset;
-  @include flex-center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-button);
-  background: rgba(255, 255, 255, 0.05);
+.subtask-title {
+  font-size: var(--text-sm);
   color: var(--text-secondary);
   transition: all var(--duration-base);
 
-  &:hover {
-    background: rgba(248, 113, 113, 0.1);
-    color: var(--error);
+  &.completed {
+    text-decoration: line-through;
+    color: var(--text-muted);
   }
 }
 
-.timer-display {
-  flex: 1;
+.task-tags {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
-.timer-time {
-  font-size: var(--text-sm);
-  font-weight: var(--font-bold);
-  color: var(--accent-primary);
-  min-width: 45px;
-}
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
 
-.timer-progress {
-  flex: 1;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.timer-progress-fill {
-  height: 100%;
-  background: var(--gradient-primary);
-  border-radius: 2px;
-  transition: width 1s linear;
+  :deep(svg) {
+    opacity: 0.6;
+  }
 }
 
 .card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .footer-left {
@@ -646,7 +568,7 @@ onMounted(() => {
   gap: var(--space-1);
   font-size: var(--text-xs);
   font-weight: var(--font-medium);
-  padding: var(--space-1) var(--space-2);
+  padding: 4px 8px;
   border-radius: var(--radius-sm);
 
   &.high {
@@ -673,13 +595,26 @@ onMounted(() => {
   color: var(--text-secondary);
   font-weight: var(--font-medium);
 
+  &.overdue {
+    color: var(--error);
+    background: rgba(248, 113, 113, 0.1);
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+  }
+
   :deep(svg) {
     color: var(--text-muted);
   }
 }
 
 .footer-right {
-  .task-time-spent {
+  .task-meta {
+    display: flex;
+    gap: var(--space-3);
+  }
+
+  .time-spent,
+  .task-created {
     display: flex;
     align-items: center;
     gap: var(--space-1);
@@ -693,29 +628,6 @@ onMounted(() => {
   }
 }
 
-.task-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  padding-top: var(--space-3);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.tag {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.05);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-
-  :deep(svg) {
-    opacity: 0.6;
-  }
-}
-
 // Light theme adjustments
 [data-theme='light'] {
   .task-category,
@@ -724,25 +636,22 @@ onMounted(() => {
   }
 
   .task-description,
-  .progress-section {
+  .task-subtasks {
     background: rgba(0, 0, 0, 0.03);
   }
 
-  .progress-bar {
-    background: rgba(0, 0, 0, 0.1);
-  }
+  .priority-badge {
+    &.high {
+      background: rgba(248, 113, 113, 0.1);
+    }
 
-  .progress-dot {
-    background: var(--card-bg);
-  }
+    &.medium {
+      background: rgba(250, 204, 21, 0.1);
+    }
 
-  .timer-section {
-    background: rgba(93, 95, 239, 0.03);
-    border-color: rgba(93, 95, 239, 0.1);
-  }
-
-  .timer-reset {
-    background: rgba(0, 0, 0, 0.05);
+    &.low {
+      background: rgba(93, 242, 126, 0.1);
+    }
   }
 }
 </style>
