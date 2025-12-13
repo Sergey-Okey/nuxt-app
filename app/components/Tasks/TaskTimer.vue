@@ -1,375 +1,427 @@
 <template>
-  <div class="task-timer" :class="{ active: isActive }">
-    <!-- Таймер с точками прогресса -->
-    <div class="timer-display">
-      <div class="timer-dots">
+  <div class="task-timer" :class="{ compact }">
+    <!-- Timer Display -->
+    <div class="timer-display" @click="toggleTimer">
+      <div class="timer-circle" :class="{ running: timerStore.isRunning }">
         <div
-          v-for="(dot, index) in dots"
-          :key="index"
-          class="timer-dot"
-          :class="{
-            filled: dot.filled,
-            current: dot.current,
-            past: dot.past,
-          }"
-          @click="setProgress((index + 1) * 10)"
+          class="timer-progress"
+          :style="{ '--progress': progressPercentage + '%' }"
         >
-          <div class="dot-fill" :style="dotFillStyle(dot)"></div>
+          <svg class="progress-ring" viewBox="0 0 100 100">
+            <circle class="progress-ring-background" cx="50" cy="50" r="45" />
+            <circle
+              class="progress-ring-fill"
+              cx="50"
+              cy="50"
+              r="45"
+              :stroke-dasharray="circumference"
+              :stroke-dashoffset="circumferenceOffset"
+            />
+          </svg>
+          <div class="timer-content">
+            <Icon
+              :name="timerStore.isRunning ? 'lucide:pause' : 'lucide:play'"
+              size="14"
+              class="timer-icon"
+            />
+            <div class="timer-minutes">{{ currentTimeDisplay }}</div>
+          </div>
         </div>
       </div>
 
-      <!-- Время и управление -->
-      <div class="timer-controls">
-        <div class="timer-time">
-          <span class="time-minutes">{{ minutes }}</span>
-          <span class="time-colon">:</span>
-          <span class="time-seconds">{{ seconds }}</span>
+      <!-- Timer Info -->
+      <div class="timer-info">
+        <div class="timer-phase">{{ phaseLabel }}</div>
+        <div class="timer-dots">
+          <div
+            v-for="dot in totalDots"
+            :key="dot"
+            class="timer-dot"
+            :class="{
+              active: activeDots >= dot,
+              current: activeDots === dot - 1 && timerStore.isRunning,
+            }"
+          ></div>
         </div>
-
-        <div class="timer-buttons">
-          <button
-            class="timer-button play-pause"
-            @click="toggleTimer"
-            :title="isRunning ? 'Пауза' : 'Старт'"
-          >
-            <Icon
-              :name="isRunning ? 'lucide:pause' : 'lucide:play'"
-              size="16"
-            />
-          </button>
-
-          <button
-            class="timer-button reset"
-            @click="resetTimer"
-            title="Сбросить"
-          >
-            <Icon name="lucide:rotate-ccw" size="16" />
-          </button>
+        <div class="timer-total">
+          {{ formatTime(totalTime) }} / {{ formatTime(taskEstimatedTime) }}
         </div>
       </div>
     </div>
 
-    <!-- Прогресс-бар -->
-    <div class="timer-progress-bar">
-      <div class="progress-fill" :style="{ width: `${progress}%` }"></div>
-      <div class="progress-markers">
-        <div
-          v-for="marker in 10"
-          :key="marker"
-          class="progress-marker"
-          :style="{ left: `${marker * 10}%` }"
-        ></div>
-      </div>
+    <!-- Timer Controls -->
+    <div v-if="showControls" class="timer-controls">
+      <button
+        class="timer-button"
+        :class="{ active: timerStore.isRunning }"
+        @click.stop="toggleTimer"
+      >
+        <Icon
+          :name="timerStore.isRunning ? 'lucide:pause' : 'lucide:play'"
+          size="14"
+        />
+        <span>{{ timerStore.isRunning ? 'Пауза' : 'Старт' }}</span>
+      </button>
+
+      <button
+        class="timer-button reset"
+        @click.stop="resetTimer"
+        :disabled="!canReset"
+      >
+        <Icon name="lucide:rotate-ccw" size="14" />
+        <span>Сброс</span>
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 
 interface Props {
   taskId: string
-  initialTime?: number // в секундах
-  autoStart?: boolean
+  showControls?: boolean
+  compact?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  initialTime: 25 * 60, // 25 минут
-  autoStart: false,
+  showControls: true,
+  compact: false,
 })
 
-const emit = defineEmits(['start', 'pause', 'complete', 'progress'])
+const emit = defineEmits(['start', 'pause', 'reset'])
 
-// Состояние таймера
-const isRunning = ref(false)
-const timeLeft = ref(props.initialTime)
-const totalTime = ref(props.initialTime)
-const intervalId = ref<NodeJS.Timeout | null>(null)
-const isActive = ref(false)
+// Stores
+const timerStore = useTimerStore()
+const tasksStore = useTasksStore()
 
-// Точки прогресса (10 точек = 100%)
-const dots = computed(() => {
-  const totalDots = 10
-  const filledDots = Math.floor((progress.value / 100) * totalDots)
+// Timer constants
+const radius = 45
+const circumference = 2 * Math.PI * radius
 
-  return Array.from({ length: totalDots }, (_, index) => {
-    const dotProgress = (index + 1) * 10
-    return {
-      index,
-      filled: dotProgress <= progress.value,
-      current: Math.floor(progress.value / 10) === index,
-      past: index < filledDots - 1,
-    }
-  })
+// Computed
+const isCurrentTask = computed(() => timerStore.currentTaskId === props.taskId)
+
+const task = computed(() => tasksStore.tasks.find((t) => t.id === props.taskId))
+
+const taskEstimatedTime = computed(
+  () => (task.value?.estimatedMinutes || 25) * 60 // в секундах
+)
+
+const currentTaskTime = computed(() => {
+  if (!isCurrentTask.value) return 0
+  return timerStore.timeLeft
 })
 
-// Прогресс в процентах
-const progress = computed(() => {
-  return ((totalTime.value - timeLeft.value) / totalTime.value) * 100
+const totalTime = computed(() => {
+  if (!isCurrentTask.value) return taskEstimatedTime.value
+  return timerStore.settings[timerStore.currentPhase]
 })
 
-// Форматированное время
-const minutes = computed(() => {
-  return Math.floor(timeLeft.value / 60)
+const progressPercentage = computed(() => {
+  if (!isCurrentTask.value) return 0
+  const total = totalTime.value
+  const left = currentTaskTime.value
+  return ((total - left) / total) * 100
+})
+
+const circumferenceOffset = computed(() => {
+  const progress = 100 - progressPercentage.value
+  return circumference - (progress / 100) * circumference
+})
+
+const currentTimeDisplay = computed(() => {
+  if (!isCurrentTask.value) {
+    return formatTime(taskEstimatedTime.value)
+  }
+
+  const minutes = Math.floor(timerStore.timeLeft / 60)
+  const seconds = timerStore.timeLeft % 60
+  return `${minutes.toString().padStart(2, '0')}:${seconds
     .toString()
-    .padStart(2, '0')
+    .padStart(2, '0')}`
 })
 
-const seconds = computed(() => {
-  return (timeLeft.value % 60).toString().padStart(2, '0')
+// Dots progress
+const totalDots = computed(() => {
+  if (!isCurrentTask.value) return 5
+  const minutes = totalTime.value / 60
+  return Math.min(10, Math.max(3, Math.floor(minutes / 5)))
 })
 
-// Стили для заполнения точки
-const dotFillStyle = (dot: any) => {
-  if (!dot.filled) return {}
+const activeDots = computed(() => {
+  if (!isCurrentTask.value) return 0
+  return Math.floor((progressPercentage.value / 100) * totalDots.value)
+})
 
-  const fillProgress = Math.min(
-    100,
-    ((progress.value - dot.index * 10) / 10) * 100
+const phaseLabel = computed(() => {
+  if (!isCurrentTask.value) return 'Готов к работе'
+
+  const phases = {
+    work: 'Фокус',
+    short_break: 'Короткий перерыв',
+    long_break: 'Длинный перерыв',
+  }
+  return phases[timerStore.currentPhase] || 'Таймер'
+})
+
+const canReset = computed(() => {
+  return (
+    isCurrentTask.value &&
+    (timerStore.isRunning || progressPercentage.value > 0)
   )
+})
 
-  return {
-    width: `${fillProgress}%`,
-    height: `${fillProgress}%`,
-  }
-}
-
-// Методы управления таймером
-const startTimer = () => {
-  if (isRunning.value || timeLeft.value <= 0) return
-
-  isRunning.value = true
-  isActive.value = true
-
-  intervalId.value = setInterval(() => {
-    timeLeft.value--
-    emit('progress', progress.value)
-
-    if (timeLeft.value <= 0) {
-      completeTimer()
-    }
-  }, 1000)
-
-  emit('start')
-}
-
-const pauseTimer = () => {
-  if (intervalId.value) {
-    clearInterval(intervalId.value)
-    intervalId.value = null
-  }
-  isRunning.value = false
-  emit('pause')
+// Methods
+const formatTime = (seconds: number) => {
+  const minutes = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${minutes.toString().padStart(2, '0')}:${secs
+    .toString()
+    .padStart(2, '0')}`
 }
 
 const toggleTimer = () => {
-  if (isRunning.value) {
-    pauseTimer()
+  if (!isCurrentTask.value) {
+    // Set custom time from task
+    timerStore.setWorkTime(taskEstimatedTime.value / 60)
+
+    // Set this task as current and start
+    timerStore.setTask(props.taskId)
+    timerStore.startTimer()
+    emit('start')
   } else {
-    startTimer()
+    if (timerStore.isRunning) {
+      timerStore.pauseTimer()
+      emit('pause')
+    } else {
+      timerStore.startTimer()
+      emit('start')
+    }
   }
 }
 
 const resetTimer = () => {
-  pauseTimer()
-  timeLeft.value = totalTime.value
-  isActive.value = false
-  emit('progress', 0)
-}
+  if (isCurrentTask.value) {
+    timerStore.resetTimer()
 
-const completeTimer = () => {
-  pauseTimer()
-  isActive.value = true
-  emit('complete')
-}
+    // Reset to task time
+    timerStore.setWorkTime(taskEstimatedTime.value / 60)
 
-const setProgress = (percent: number) => {
-  if (isRunning.value) return
-
-  const newProgress = Math.max(0, Math.min(100, percent))
-  timeLeft.value = totalTime.value * (1 - newProgress / 100)
-  isActive.value = newProgress > 0
-  emit('progress', newProgress)
-}
-
-// Установка времени в минутах
-const setTime = (minutes: number) => {
-  totalTime.value = minutes * 60
-  timeLeft.value = totalTime.value
-  resetTimer()
-}
-
-// Автозапуск
-if (props.autoStart) {
-  startTimer()
-}
-
-// Очистка интервала при размонтировании
-onUnmounted(() => {
-  if (intervalId.value) {
-    clearInterval(intervalId.value)
-  }
-})
-
-// Сохранение состояния в localStorage
-const saveState = () => {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(
-      `task-timer-${props.taskId}`,
-      JSON.stringify({
-        timeLeft: timeLeft.value,
-        totalTime: totalTime.value,
-        isActive: isActive.value,
-      })
-    )
+    emit('reset')
   }
 }
 
-const loadState = () => {
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem(`task-timer-${props.taskId}`)
-    if (saved) {
-      try {
-        const state = JSON.parse(saved)
-        timeLeft.value = state.timeLeft || props.initialTime
-        totalTime.value = state.totalTime || props.initialTime
-        isActive.value = state.isActive || false
-      } catch (e) {
-        console.error('Error loading timer state:', e)
-      }
+// Auto-save task time when timer completes
+const handlePhaseComplete = () => {
+  if (isCurrentTask.value && timerStore.currentSession?.endAt) {
+    const start = new Date(timerStore.currentSession.startAt).getTime()
+    const end = new Date(timerStore.currentSession.endAt).getTime()
+    const timeSpent = Math.round((end - start) / 60000)
+
+    if (timeSpent > 0) {
+      tasksStore.addTimeToTask(props.taskId, timeSpent)
     }
   }
 }
 
-// Загрузка состояния при монтировании
+// Watch for phase completion
+let unwatch: () => void
 onMounted(() => {
-  loadState()
+  // Initialize timer store
+  timerStore.initialize()
+
+  // Watch for phase changes
+  unwatch = watch(
+    () => timerStore.currentPhase,
+    (newPhase, oldPhase) => {
+      if (oldPhase === 'work' && newPhase !== 'work' && isCurrentTask.value) {
+        handlePhaseComplete()
+      }
+    }
+  )
 })
 
-// Автосохранение при изменениях
-watch([timeLeft, isActive], () => {
-  saveState()
+onUnmounted(() => {
+  if (unwatch) unwatch()
 })
 
-defineExpose({
-  startTimer,
-  pauseTimer,
-  resetTimer,
-  setTime,
-  progress,
-  isRunning,
-})
+// Watch task estimated time changes
+watch(
+  () => task.value?.estimatedMinutes,
+  (newTime, oldTime) => {
+    if (newTime !== oldTime && isCurrentTask.value && !timerStore.isRunning) {
+      // Update timer settings if task time changed
+      timerStore.setWorkTime(newTime || 25)
+    }
+  }
+)
 </script>
 
 <style scoped lang="scss">
 .task-timer {
-  --timer-accent: var(--accent);
-  --timer-bg: rgba(93, 95, 239, 0.05);
-  --timer-border: rgba(93, 95, 239, 0.1);
-  --dot-size: 32px;
-  --dot-gap: 8px;
-
-  background: var(--timer-bg);
-  border: 1px solid var(--timer-border);
-  border-radius: var(--radius-card);
-  padding: var(--space-4);
-  transition: all var(--duration-base);
-
-  &.active {
-    --timer-bg: rgba(93, 95, 239, 0.1);
-    --timer-border: rgba(93, 95, 239, 0.2);
-    box-shadow: 0 0 0 1px rgba(93, 95, 239, 0.1);
-  }
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
 }
 
 .timer-display {
   display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  cursor: pointer;
+  user-select: none;
+  flex: 1;
+  min-width: 0;
+}
+
+.timer-circle {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  flex-shrink: 0;
+
+  @include breakpoint(sm) {
+    width: 56px;
+    height: 56px;
+  }
+
+  &.running {
+    .timer-content {
+      animation: pulse 2s var(--ease-in-out) infinite;
+    }
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.timer-progress {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.progress-ring {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+
+  circle {
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: round;
+
+    @include breakpoint(sm) {
+      stroke-width: 4;
+    }
+  }
+}
+
+.progress-ring-background {
+  stroke: rgba(255, 255, 255, 0.1);
+}
+
+.progress-ring-fill {
+  stroke: var(--accent-primary);
+  stroke-dasharray: 283;
+  stroke-dashoffset: calc(283 - (283 * var(--progress, 0)) / 100);
+  transition: stroke-dashoffset 1s linear;
+}
+
+.timer-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  @include flex-center;
   flex-direction: column;
-  gap: var(--space-4);
-  margin-bottom: var(--space-3);
+  gap: 1px;
+}
+
+.timer-icon {
+  color: var(--accent-primary);
+  opacity: 0.8;
+}
+
+.timer-minutes {
+  font-size: 9px;
+  font-weight: var(--font-bold);
+  color: var(--accent-primary);
+
+  @include breakpoint(sm) {
+    font-size: 10px;
+  }
+}
+
+.timer-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.timer-phase {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+  margin-bottom: 2px;
+  @include text-truncate;
 }
 
 .timer-dots {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 calc(var(--dot-gap) / 2);
+  gap: 4px;
+  margin-bottom: 2px;
 }
 
 .timer-dot {
-  position: relative;
-  width: var(--dot-size);
-  height: var(--dot-size);
-  flex-shrink: 0;
-  cursor: pointer;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
   transition: all var(--duration-base);
 
-  &:hover {
-    transform: scale(1.1);
-    border-color: var(--timer-accent);
-  }
-
-  &.filled {
-    border-color: var(--timer-accent);
+  &.active {
+    background: var(--accent-primary);
   }
 
   &.current {
-    border-color: var(--timer-accent);
-    box-shadow: 0 0 12px rgba(93, 95, 239, 0.3);
-  }
-
-  &.past .dot-fill {
-    background: var(--timer-accent);
+    background: var(--accent-secondary);
+    transform: scaleY(1.5);
+    animation: dot-pulse 1.5s var(--ease-in-out) infinite;
   }
 }
 
-.dot-fill {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(93, 95, 239, 0.3);
-  border-radius: 50%;
-  transition: all var(--duration-base);
-  width: 0%;
-  height: 0%;
+@keyframes dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.timer-total {
+  font-size: 9px;
+  color: var(--text-secondary);
+  font-weight: var(--font-medium);
+  @include text-truncate;
+
+  @include breakpoint(sm) {
+    font-size: var(--text-xs);
+  }
 }
 
 .timer-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.timer-time {
-  display: flex;
-  align-items: baseline;
-  font-family: 'Inter', monospace;
-  font-variant-numeric: tabular-nums;
-}
-
-.time-minutes {
-  font-size: 32px;
-  font-weight: var(--font-bold);
-  color: var(--text-primary);
-}
-
-.time-colon {
-  font-size: 24px;
-  color: var(--timer-accent);
-  margin: 0 2px;
-}
-
-.time-seconds {
-  font-size: 20px;
-  font-weight: var(--font-medium);
-  color: var(--text-secondary);
-}
-
-.timer-buttons {
   display: flex;
   gap: var(--space-2);
 }
@@ -377,90 +429,181 @@ defineExpose({
 .timer-button {
   @include button-reset;
   @include flex-center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-full);
-  background: var(--timer-accent);
-  color: white;
+  gap: var(--space-1);
+  flex: 1;
+  padding: 6px 10px;
+  background: rgba(119, 119, 119, 0.1);
+  border: 1px solid rgba(119, 119, 119, 0.2);
+  border-radius: var(--radius-sm);
+  color: var(--accent-primary);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  cursor: pointer;
   transition: all var(--duration-base);
 
-  &:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(93, 95, 239, 0.3);
+  @include breakpoint(sm) {
+    padding: 8px 12px;
+    font-size: var(--text-sm);
+  }
+
+  &:hover:not(:disabled) {
+    background: rgba(119, 119, 119, 0.2);
+    transform: translateY(-1px);
+  }
+
+  &.active {
+    background: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+
+    &:hover {
+      background: var(--accent-secondary);
+    }
   }
 
   &.reset {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
     color: var(--text-secondary);
 
-    &:hover {
-      background: rgba(255, 255, 255, 0.15);
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
+
+    &:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
     }
   }
 }
 
-.timer-progress-bar {
-  position: relative;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  background: var(--gradient-primary);
-  border-radius: 2px;
-  transition: width 1s linear;
-}
-
-.progress-markers {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-}
-
-.progress-marker {
-  position: absolute;
-  top: 0;
-  width: 2px;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateX(-50%);
-
-  &:nth-child(5) {
-    height: 8px;
-    top: -2px;
-    background: rgba(255, 255, 255, 0.2);
+// Compact mode
+.task-timer.compact {
+  .timer-display {
+    gap: var(--space-2);
   }
-}
 
-// Light theme adjustments
-[data-theme='light'] {
-  .task-timer {
-    --timer-bg: rgba(93, 95, 239, 0.03);
-    --timer-border: rgba(93, 95, 239, 0.1);
+  .timer-circle {
+    width: 40px;
+    height: 40px;
+  }
+
+  .timer-minutes {
+    font-size: 8px;
+  }
+
+  .timer-phase {
+    font-size: 10px;
+  }
+
+  .timer-dots {
+    gap: 2px;
   }
 
   .timer-dot {
-    background: rgba(0, 0, 0, 0.03);
-    border-color: rgba(0, 0, 0, 0.1);
+    height: 2px;
   }
 
-  .timer-progress-bar {
-    background: rgba(0, 0, 0, 0.05);
+  .timer-total {
+    font-size: 8px;
   }
 
-  .progress-marker {
+  .timer-controls {
+    gap: var(--space-1);
+  }
+
+  .timer-button {
+    padding: 4px 6px;
+    font-size: 10px;
+    gap: 2px;
+  }
+}
+
+// Light theme
+[data-theme='light'] {
+  .progress-ring-background {
+    stroke: rgba(0, 0, 0, 0.1);
+  }
+
+  .timer-dot {
     background: rgba(0, 0, 0, 0.1);
+  }
 
-    &:nth-child(5) {
-      background: rgba(0, 0, 0, 0.2);
+  .timer-button {
+    background: rgba(119, 119, 119, 0.08);
+    border-color: rgba(119, 119, 119, 0.15);
+
+    &.reset {
+      background: rgba(0, 0, 0, 0.05);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+  }
+}
+
+// Mobile optimizations
+@include breakpoint(xs) {
+  .timer-display {
+    gap: var(--space-2);
+  }
+
+  .timer-circle {
+    width: 44px;
+    height: 44px;
+  }
+
+  .timer-dots {
+    display: none;
+  }
+
+  .timer-controls {
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .timer-button {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+}
+
+// Tablet optimizations
+@include breakpoint(sm) {
+  .task-timer:not(.compact) {
+    .timer-circle {
+      width: 60px;
+      height: 60px;
+    }
+
+    .timer-minutes {
+      font-size: var(--text-sm);
+    }
+
+    .timer-phase {
+      font-size: var(--text-sm);
+    }
+
+    .timer-total {
+      font-size: var(--text-xs);
+    }
+  }
+}
+
+// Desktop optimizations
+@include breakpoint(md) {
+  .task-timer:not(.compact) {
+    .timer-circle {
+      width: 70px;
+      height: 70px;
+    }
+
+    .timer-minutes {
+      font-size: var(--text-base);
+    }
+
+    .timer-button {
+      padding: var(--space-2) var(--space-4);
+      font-size: var(--text-sm);
     }
   }
 }

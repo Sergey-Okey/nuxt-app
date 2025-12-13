@@ -6,22 +6,26 @@ export interface PomodoroSession {
   startAt: Date
   endAt?: Date
   phase: 'work' | 'short_break' | 'long_break'
+  targetTime?: number // Время, установленное в задаче (в минутах)
 }
 
 export const useTimerStore = defineStore('timer', {
   state: () => ({
     isRunning: false,
-    timeLeft: 25 * 60, // 25 минут в секундах
+    timeLeft: 25 * 60, // Начальное значение (25 минут в секундах)
     currentPhase: 'work' as 'work' | 'short_break' | 'long_break',
     sessions: [] as PomodoroSession[],
     currentTaskId: null as string | null,
     currentSession: null as PomodoroSession | null,
 
     settings: {
-      work: 25 * 60,
+      defaultWork: 25 * 60, // Дефолтное время работы (25 минут)
       shortBreak: 5 * 60,
       longBreak: 15 * 60,
       sessionsBeforeLongBreak: 4,
+      useTaskTime: true, // Использовать время из задачи
+      minWorkTime: 1 * 60, // Минимальное время работы (1 минута)
+      maxWorkTime: 480 * 60, // Максимальное время работы (8 часов)
     },
   }),
 
@@ -35,8 +39,23 @@ export const useTimerStore = defineStore('timer', {
     },
 
     progress: (state) => {
-      const total = state.settings[state.currentPhase]
-      return ((total - state.timeLeft) / total) * 100
+      // Получаем целевое время для текущей фазы
+      let totalTime = 0
+
+      if (state.currentPhase === 'work' && state.currentSession?.targetTime) {
+        // Для фазы работы используем время из задачи
+        totalTime = state.currentSession.targetTime * 60
+      } else {
+        // Для перерывов используем настройки
+        totalTime =
+          state.settings[
+            state.currentPhase === 'short_break' ? 'shortBreak' : 'longBreak'
+          ]
+      }
+
+      return totalTime > 0
+        ? ((totalTime - state.timeLeft) / totalTime) * 100
+        : 0
     },
 
     currentTask: (state) => {
@@ -45,6 +64,13 @@ export const useTimerStore = defineStore('timer', {
         return tasksStore.tasks.find((task) => task.id === state.currentTaskId)
       }
       return null
+    },
+
+    currentTaskTime: (state) => {
+      if (!state.currentTaskId) return null
+      const tasksStore = useTasksStore()
+      const task = tasksStore.tasks.find((t) => t.id === state.currentTaskId)
+      return task?.estimatedMinutes || null
     },
 
     todaysSessions: (state) => {
@@ -72,6 +98,22 @@ export const useTimerStore = defineStore('timer', {
         return total
       }, 0)
     },
+
+    // Получаем текущее время для фазы с учетом задачи
+    currentPhaseTime: (state) => {
+      if (state.currentPhase === 'work' && state.currentSession?.targetTime) {
+        return state.currentSession.targetTime
+      }
+
+      switch (state.currentPhase) {
+        case 'work':
+          return state.settings.defaultWork / 60
+        case 'short_break':
+          return state.settings.shortBreak / 60
+        case 'long_break':
+          return state.settings.longBreak / 60
+      }
+    },
   },
 
   actions: {
@@ -91,7 +133,22 @@ export const useTimerStore = defineStore('timer', {
                 ...session,
                 startAt: new Date(session.startAt),
                 endAt: session.endAt ? new Date(session.endAt) : undefined,
+                targetTime: session.targetTime || undefined,
               })) || []
+            this.settings = { ...this.settings, ...parsed.settings }
+
+            // Если есть текущая задача, обновляем время
+            if (this.currentTaskId && this.currentPhase === 'work') {
+              this.updateTimeFromTask(this.currentTaskId)
+            }
+
+            // Восстанавливаем сессию, если таймер был запущен
+            if (this.isRunning && this.timeLeft > 0) {
+              // Таймер был прерван, сбрасываем его
+              this.isRunning = false
+              this.timeLeft = this.settings.defaultWork
+              this.currentSession = null
+            }
 
             // Если нет сессий, добавляем демо-данные
             if (this.sessions.length === 0) {
@@ -99,11 +156,9 @@ export const useTimerStore = defineStore('timer', {
             }
           } catch (error) {
             console.error('Error loading timer from localStorage:', error)
-            // Добавляем демо-данные если загрузка не удалась
             this.addSampleSessions()
           }
         } else {
-          // Добавляем демо-данные для нового пользователя
           this.addSampleSessions()
         }
       }
@@ -120,6 +175,7 @@ export const useTimerStore = defineStore('timer', {
             currentPhase: this.currentPhase,
             currentTaskId: this.currentTaskId,
             sessions: this.sessions,
+            settings: this.settings,
           })
         )
       }
@@ -131,7 +187,6 @@ export const useTimerStore = defineStore('timer', {
       const yesterday = new Date(today)
       yesterday.setDate(yesterday.getDate() - 1)
 
-      // Сессии за сегодня
       const todaySessions = [
         {
           id: '1',
@@ -151,6 +206,7 @@ export const useTimerStore = defineStore('timer', {
             25
           ),
           phase: 'work' as const,
+          targetTime: 25,
         },
         {
           id: '2',
@@ -167,99 +223,70 @@ export const useTimerStore = defineStore('timer', {
             today.getMonth(),
             today.getDate(),
             10,
-            25
-          ),
-          phase: 'work' as const,
-        },
-        {
-          id: '3',
-          taskId: 'sample-3',
-          startAt: new Date(
-            today.getFullYear(),
-            today.getMonth(),
-            today.getDate(),
-            14,
             30
           ),
-          endAt: new Date(
-            today.getFullYear(),
-            today.getMonth(),
-            today.getDate(),
-            14,
-            55
-          ),
           phase: 'work' as const,
+          targetTime: 30,
         },
       ]
 
-      // Сессии за вчера
-      const yesterdaySessions = [
-        {
-          id: '4',
-          taskId: 'sample-4',
-          startAt: new Date(
-            yesterday.getFullYear(),
-            yesterday.getMonth(),
-            yesterday.getDate(),
-            10,
-            0
-          ),
-          endAt: new Date(
-            yesterday.getFullYear(),
-            yesterday.getMonth(),
-            yesterday.getDate(),
-            10,
-            25
-          ),
-          phase: 'work' as const,
-        },
-        {
-          id: '5',
-          taskId: 'sample-5',
-          startAt: new Date(
-            yesterday.getFullYear(),
-            yesterday.getMonth(),
-            yesterday.getDate(),
-            11,
-            0
-          ),
-          endAt: new Date(
-            yesterday.getFullYear(),
-            yesterday.getMonth(),
-            yesterday.getDate(),
-            11,
-            25
-          ),
-          phase: 'work' as const,
-        },
-        {
-          id: '6',
-          taskId: 'sample-6',
-          startAt: new Date(
-            yesterday.getFullYear(),
-            yesterday.getMonth(),
-            yesterday.getDate(),
-            15,
-            0
-          ),
-          endAt: new Date(
-            yesterday.getFullYear(),
-            yesterday.getMonth(),
-            yesterday.getDate(),
-            15,
-            25
-          ),
-          phase: 'work' as const,
-        },
-      ]
-
-      this.sessions = [...todaySessions, ...yesterdaySessions]
+      this.sessions = todaySessions
       this.saveToLocalStorage()
+    },
+
+    // Обновление времени из задачи
+    updateTimeFromTask(taskId: string) {
+      if (!taskId) return false
+
+      const tasksStore = useTasksStore()
+      const task = tasksStore.tasks.find((t) => t.id === taskId)
+
+      if (task && task.estimatedMinutes) {
+        const taskTimeInSeconds = task.estimatedMinutes * 60
+
+        // Проверяем границы времени
+        if (taskTimeInSeconds < this.settings.minWorkTime) {
+          console.warn(
+            'Task time is below minimum, using minimum:',
+            this.settings.minWorkTime / 60,
+            'min'
+          )
+          this.timeLeft = this.settings.minWorkTime
+        } else if (taskTimeInSeconds > this.settings.maxWorkTime) {
+          console.warn(
+            'Task time exceeds maximum, using maximum:',
+            this.settings.maxWorkTime / 60,
+            'min'
+          )
+          this.timeLeft = this.settings.maxWorkTime
+        } else {
+          this.timeLeft = taskTimeInSeconds
+        }
+
+        // Обновляем таргет время для сессии
+        if (this.currentSession) {
+          this.currentSession.targetTime = Math.floor(this.timeLeft / 60)
+        }
+
+        this.saveToLocalStorage()
+        return true
+      }
+
+      return false
     },
 
     // Установка задачи для таймера
     setTask(taskId: string | null) {
       this.currentTaskId = taskId
+
+      if (taskId && this.currentPhase === 'work') {
+        // Если выбрана задача и мы в фазе работы, обновляем время
+        this.updateTimeFromTask(taskId)
+      } else if (!taskId && this.currentPhase === 'work' && !this.isRunning) {
+        // Если задача снята, возвращаем дефолтное время
+        this.timeLeft = this.settings.defaultWork
+      }
+
       this.saveToLocalStorage()
     },
 
@@ -269,11 +296,17 @@ export const useTimerStore = defineStore('timer', {
         this.isRunning = true
 
         // Создаем новую сессию
+        const targetTime =
+          this.currentPhase === 'work' && this.currentTaskId
+            ? this.currentTaskTime
+            : null
+
         this.currentSession = {
           id: Date.now().toString(),
           startAt: new Date(),
           phase: this.currentPhase,
           taskId: this.currentTaskId || undefined,
+          targetTime: targetTime || undefined,
         }
 
         this.saveToLocalStorage()
@@ -289,7 +322,7 @@ export const useTimerStore = defineStore('timer', {
           }
         }, 1000)
 
-        // Сохраняем ID интервала для очистки
+        // Сохраняем ID интервала
         if (process.client) {
           ;(window as any).timerInterval = timerInterval
         }
@@ -300,7 +333,6 @@ export const useTimerStore = defineStore('timer', {
     pauseTimer() {
       this.isRunning = false
 
-      // Очищаем интервал
       if (process.client && (window as any).timerInterval) {
         clearInterval((window as any).timerInterval)
         ;(window as any).timerInterval = null
@@ -312,10 +344,21 @@ export const useTimerStore = defineStore('timer', {
     // Сброс таймера
     resetTimer() {
       this.isRunning = false
-      this.timeLeft = this.settings[this.currentPhase]
+
+      // Сбрасываем время с учетом задачи
+      if (this.currentPhase === 'work' && this.currentTaskId) {
+        this.updateTimeFromTask(this.currentTaskId)
+      } else {
+        this.timeLeft =
+          this.currentPhase === 'work'
+            ? this.settings.defaultWork
+            : this.currentPhase === 'short_break'
+            ? this.settings.shortBreak
+            : this.settings.longBreak
+      }
+
       this.currentSession = null
 
-      // Очищаем интервал
       if (process.client && (window as any).timerInterval) {
         clearInterval((window as any).timerInterval)
         ;(window as any).timerInterval = null
@@ -328,7 +371,6 @@ export const useTimerStore = defineStore('timer', {
     completePhase() {
       this.isRunning = false
 
-      // Очищаем интервал
       if (process.client && (window as any).timerInterval) {
         clearInterval((window as any).timerInterval)
         ;(window as any).timerInterval = null
@@ -339,7 +381,10 @@ export const useTimerStore = defineStore('timer', {
         this.sessions.push(this.currentSession)
 
         // Добавляем время к задаче
-        if (this.currentSession.taskId) {
+        if (
+          this.currentSession.taskId &&
+          this.currentSession.phase === 'work'
+        ) {
           const tasksStore = useTasksStore()
           const timeSpent = Math.round(
             (this.currentSession.endAt.getTime() -
@@ -359,85 +404,149 @@ export const useTimerStore = defineStore('timer', {
           completedWorkSessions % this.settings.sessionsBeforeLongBreak === 0
             ? 'long_break'
             : 'short_break'
+        this.timeLeft =
+          this.currentPhase === 'long_break'
+            ? this.settings.longBreak
+            : this.settings.shortBreak
       } else {
         this.currentPhase = 'work'
+        // При переходе к работе используем время задачи или дефолтное
+        if (this.currentTaskId) {
+          this.updateTimeFromTask(this.currentTaskId)
+        } else {
+          this.timeLeft = this.settings.defaultWork
+        }
       }
 
-      this.timeLeft = this.settings[this.currentPhase]
       this.currentSession = null
       this.saveToLocalStorage()
-
-      // Уведомление
       this.showNotification()
     },
 
-    // Показать уведомление
-    showNotification() {
-      if (process.client && 'Notification' in window) {
-        if (Notification.permission === 'granted') {
-          const phaseName = {
-            work: 'Работа',
-            short_break: 'Короткий перерыв',
-            long_break: 'Длинный перерыв',
-          }[this.currentPhase]
-
-          new Notification(`TaskFlow: ${phaseName}`, {
-            body:
-              this.currentPhase === 'work'
-                ? 'Время поработать!'
-                : 'Время отдохнуть!',
-            icon: '/icon.png',
-          })
-        } else if (Notification.permission !== 'denied') {
-          Notification.requestPermission().then((permission) => {
-            if (permission === 'granted') {
-              this.showNotification()
-            }
-          })
-        }
-      }
-    },
-
-    // Настройка времени
+    // Настройка времени работы
     setWorkTime(minutes: number) {
-      this.settings.work = minutes * 60
-      if (this.currentPhase === 'work' && !this.isRunning) {
-        this.timeLeft = this.settings.work
+      const timeInSeconds = minutes * 60
+
+      // Проверяем границы
+      if (timeInSeconds < this.settings.minWorkTime) {
+        timeInSeconds = this.settings.minWorkTime
+      } else if (timeInSeconds > this.settings.maxWorkTime) {
+        timeInSeconds = this.settings.maxWorkTime
       }
+
+      this.settings.defaultWork = timeInSeconds
+
+      // Обновляем текущее время, если нет активной задачи
+      if (
+        this.currentPhase === 'work' &&
+        !this.isRunning &&
+        !this.currentTaskId
+      ) {
+        this.timeLeft = this.settings.defaultWork
+      }
+
       this.saveToLocalStorage()
     },
 
+    // Настройка времени перерыва
     setBreakTime(type: 'shortBreak' | 'longBreak', minutes: number) {
-      this.settings[type] = minutes * 60
-      if (this.currentPhase === type && !this.isRunning) {
+      const timeInSeconds = minutes * 60
+
+      // Минимальное время перерыва - 1 минута
+      if (timeInSeconds < 60) {
+        timeInSeconds = 60
+      }
+
+      this.settings[type] = timeInSeconds
+
+      // Обновляем текущее время, если мы в соответствующей фазе
+      if (
+        this.currentPhase ===
+          (type === 'shortBreak' ? 'short_break' : 'long_break') &&
+        !this.isRunning
+      ) {
         this.timeLeft = this.settings[type]
       }
+
       this.saveToLocalStorage()
     },
 
     // Смена фазы вручную
     switchPhase(phase: 'work' | 'short_break' | 'long_break') {
       if (!this.isRunning) {
+        const oldPhase = this.currentPhase
         this.currentPhase = phase
-        this.timeLeft = this.settings[phase]
+
+        if (phase === 'work') {
+          // При переходе к работе используем время задачи
+          if (this.currentTaskId) {
+            this.updateTimeFromTask(this.currentTaskId)
+          } else {
+            this.timeLeft = this.settings.defaultWork
+          }
+        } else {
+          // Для перерывов используем настройки
+          this.timeLeft =
+            phase === 'short_break'
+              ? this.settings.shortBreak
+              : this.settings.longBreak
+        }
+
+        // Сбрасываем сессию при смене фазы
+        this.currentSession = null
+
         this.saveToLocalStorage()
       }
     },
 
-    // Добавление сессии вручную (для тестирования)
-    addSession(session: Omit<PomodoroSession, 'id'>) {
-      const newSession: PomodoroSession = {
-        ...session,
-        id: Date.now().toString(),
+    // Получение рекомендованного времени для задачи
+    getRecommendedTime(taskComplexity: 'low' | 'medium' | 'high'): number {
+      const recommendations = {
+        low: 15, // 15 минут
+        medium: 30, // 30 минут
+        high: 60, // 1 час
       }
-      this.sessions.push(newSession)
-      this.saveToLocalStorage()
+      return recommendations[taskComplexity]
     },
 
-    // Очистка всех сессий
-    clearSessions() {
-      this.sessions = []
-      this.saveToLocalStorage()
+    // Проверка, сколько времени можно добавить к задаче
+    getRemainingTimeForTask(taskId: string): number {
+      const tasksStore = useTasksStore()
+      const task = tasksStore.tasks.find((t) => t.id === taskId)
+
+      if (!task) return 0
+
+      const spent = task.spentMinutes || 0
+      const estimated = task.estimatedMinutes || 0
+
+      // Возвращаем оставшееся время или 0, если время не ограничено
+      return estimated > spent ? estimated - spent : 0
+    },
+
+    // Уведомление
+    showNotification() {
+      if (
+        process.client &&
+        'Notification' in window &&
+        Notification.permission === 'granted'
+      ) {
+        const phaseNames = {
+          work: 'Работа',
+          short_break: 'Короткий перерыв',
+          long_break: 'Длинный перерыв',
+        }
+
+        const messages = {
+          work: 'Время поработать!',
+          short_break: 'Время отдохнуть 5 минут!',
+          long_break: 'Время для длинного перерыва 15 минут!',
+        }
+
+        new Notification(`TaskFlow: ${phaseNames[this.currentPhase]}`, {
+          body: messages[this.currentPhase],
+          icon: '/icon.png',
+        })
+      }
     },
   },
 })

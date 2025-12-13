@@ -1,5 +1,5 @@
 <template>
-  <div class="tasks-filters">
+  <div class="tasks-filters" ref="filtersRef">
     <!-- Search and Filter Bar -->
     <div class="filters-bar">
       <div class="search-container">
@@ -183,7 +183,7 @@
           <div v-if="hasActiveFilters" class="active-filters">
             <div class="active-filters-header">
               <span class="filters-title">Активные фильтры</span>
-              <button class="clear-all" @click="resetFilters">
+              <button class="clear-all" @click="resetAllFilters">
                 Очистить все
               </button>
             </div>
@@ -235,6 +235,18 @@
 import debounce from 'lodash/debounce'
 
 const tasksStore = useTasksStore()
+
+// Emits для связи с родителем
+const emit = defineEmits<{
+  search: [query: string]
+  'filter-change': [
+    filters: {
+      status: string
+      category: string
+      priority: string
+    }
+  ]
+}>()
 
 // State
 const showFilters = ref(false)
@@ -290,23 +302,43 @@ const toggleSection = (section: keyof typeof expandedSections.value) => {
 
 const setFilter = (type: 'status' | 'category' | 'priority', value: string) => {
   tasksStore.setFilter(type, value)
+  // Эмитим изменения фильтров родителю
+  emit('filter-change', {
+    status: type === 'status' ? value : filters.value.status,
+    category: type === 'category' ? value : filters.value.category,
+    priority: type === 'priority' ? value : filters.value.priority,
+  })
 }
 
 const resetFilters = () => {
   tasksStore.resetFilters()
+  // Эмитим сброс фильтров родителю
+  emit('filter-change', {
+    status: 'all',
+    category: 'all',
+    priority: 'all',
+  })
+}
+
+const resetAllFilters = () => {
+  resetFilters()
+  clearSearch()
+  applyFilters()
 }
 
 const applyFilters = () => {
   showFilters.value = false
 }
 
+// Поиск с дебаунсом
 const handleSearch = debounce(() => {
-  // TODO: Implement search functionality
-  console.log('Searching for:', searchQuery.value)
+  // Эмитим запрос поиска родителю
+  emit('search', searchQuery.value)
 }, 300)
 
 const clearSearch = () => {
   searchQuery.value = ''
+  emit('search', '')
 }
 
 const getStatusLabel = (status: string) => {
@@ -326,7 +358,8 @@ const getPriorityLabel = (priority: string) => {
 }
 
 // Close filters when clicking outside
-onClickOutside(document, () => {
+const filtersRef = ref(null)
+onClickOutside(filtersRef, () => {
   if (showFilters.value) {
     showFilters.value = false
   }
@@ -342,9 +375,24 @@ onMounted(() => {
     priority: !isMobile,
   }
 })
+
+// Следим за изменениями фильтров в сторе (на случай внешних изменений)
+watch(
+  () => tasksStore.filters,
+  (newFilters) => {
+    emit('filter-change', newFilters)
+  },
+  { deep: true }
+)
+
+// Следим за изменениями поиска
+watch(searchQuery, (newQuery) => {
+  handleSearch()
+})
 </script>
 
 <style scoped lang="scss">
+/* Ваши стили остаются без изменений */
 .tasks-filters {
   margin-bottom: var(--space-4);
 }
@@ -353,7 +401,6 @@ onMounted(() => {
 .filters-bar {
   display: flex;
   gap: var(--space-3);
-  margin-bottom: var(--space-3);
 }
 
 .search-container {
@@ -468,8 +515,6 @@ onMounted(() => {
 
 // Expanded Filters
 .expanded-filters {
-  @include card;
-  border: 1px solid rgba(255, 255, 255, 0.05);
   overflow: hidden;
 }
 

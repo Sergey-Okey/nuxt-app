@@ -1,426 +1,351 @@
 <template>
-  <div class="tasks-page">
+  <div class="tasks-dashboard">
     <!-- Header -->
-    <div class="page-header">
+    <div class="dashboard-header">
       <div class="header-content">
-        <div class="title-section">
-          <h1 class="page-title">Мои задачи</h1>
-          <div class="stats-overview">
-            <div class="stat">
-              <span class="stat-value">{{ activeTasksCount }}</span>
-              <span class="stat-label">активных</span>
-            </div>
-            <div class="stat">
-              <span class="stat-value">{{ completedTasksCount }}</span>
-              <span class="stat-label">выполнено</span>
-            </div>
-            <div class="stat">
-              <span class="stat-value">{{ totalTimeSpent }}</span>
-              <span class="stat-label">времени</span>
-            </div>
-          </div>
+        <div class="header-info">
+          <h1 class="dashboard-title">Задачи</h1>
         </div>
 
         <div class="header-actions">
-          <div class="view-toggle">
-            <button
-              class="view-button"
-              :class="{ active: viewMode === 'grid' }"
-              @click="viewMode = 'grid'"
-            >
-              <Icon name="lucide:layout-grid" size="18" />
-            </button>
-            <button
-              class="view-button"
-              :class="{ active: viewMode === 'list' }"
-              @click="viewMode = 'list'"
-            >
-              <Icon name="lucide:list" size="18" />
-            </button>
-          </div>
-
-          <button class="create-button" @click="openCreateModal">
-            <Icon name="lucide:plus" size="18" />
-            <span>Новая задача</span>
+          <button class="action-button primary" @click="openCreateModal">
+            <Icon name="lucide:plus" size="16" />
+            <span>Создать</span>
           </button>
         </div>
       </div>
 
-      <!-- Quick Actions -->
-      <div class="quick-actions">
-        <div class="action-group">
-          <button
-            v-for="filter in quickFilters"
-            :key="filter.value"
-            class="quick-filter"
-            :class="{ active: filters.status === filter.value }"
-            @click="applyQuickFilter(filter.value)"
-          >
-            <Icon :name="filter.icon" size="14" />
-            <span>{{ filter.label }}</span>
-          </button>
-        </div>
-
-        <div class="search-container">
-          <Icon name="lucide:search" size="16" class="search-icon" />
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Поиск задач..."
-            class="search-input"
-            @input="handleSearch"
-          />
-          <button v-if="searchQuery" class="clear-search" @click="clearSearch">
-            <Icon name="lucide:x" size="12" />
-          </button>
-        </div>
+      <!-- Compact Filters -->
+      <div class="compact-filters">
+        <TasksFilters
+          @search="handleSearch"
+          @filter-change="handleFilterChange"
+        />
       </div>
-    </div>
-
-    <!-- Filters Panel -->
-    <TaskFilters
-      v-model:show-filters="showFilters"
-      :filters="filters"
-      @update:filters="updateFilters"
-      @reset="resetFilters"
-    />
-
-    <!-- Active Filters -->
-    <div v-if="hasActiveFilters" class="active-filters-bar">
-      <div class="filters-tags">
-        <span
-          class="filter-tag"
-          v-if="filters.status !== 'all'"
-          @click="setFilter('status', 'all')"
-        >
-          {{ getStatusLabel(filters.status) }}
-          <Icon name="lucide:x" size="10" />
-        </span>
-
-        <span
-          v-for="category in selectedCategories"
-          :key="category.id"
-          class="filter-tag"
-          @click="removeCategoryFilter(category.id)"
-        >
-          {{ category.name }}
-          <Icon name="lucide:x" size="10" />
-        </span>
-
-        <span
-          class="filter-tag"
-          v-if="filters.priority !== 'all'"
-          @click="setFilter('priority', 'all')"
-        >
-          {{ getPriorityLabel(filters.priority) }}
-          <Icon name="lucide:x" size="10" />
-        </span>
-      </div>
-
-      <button class="clear-filters" @click="resetFilters">
-        <Icon name="lucide:x-circle" size="14" />
-        <span>Очистить</span>
-      </button>
     </div>
 
     <!-- Tasks Content -->
-    <div class="tasks-content">
-      <div
-        v-if="filteredTasks.length > 0"
-        class="tasks-container"
-        :class="viewMode"
-      >
-        <TaskCard
-          v-for="task in paginatedTasks"
-          :key="task.id"
-          :task="task"
-          @toggle-status="toggleTaskStatus(task.id)"
-          @start-timer="startTaskTimer(task)"
-          @edit="openEditModal(task)"
-          @delete="confirmDeleteTask(task.id)"
-          @select="openTaskDetails(task)"
-          @duplicate="duplicateTask(task)"
-          @archive="archiveTask(task)"
-        />
+    <div class="dashboard-content">
+      <!-- Active Filters -->
+      <div v-if="hasActiveFilters" class="active-filters-bar">
+        <div class="active-filters">
+          <span class="filters-label">Фильтры:</span>
+          <div class="filter-tags">
+            <span
+              v-if="activeFilters.status !== 'all'"
+              class="filter-tag"
+              @click="removeFilter('status')"
+            >
+              {{ getStatusLabel(activeFilters.status) }}
+              <Icon name="lucide:x" size="12" />
+            </span>
+            <span
+              v-if="activeFilters.category !== 'all'"
+              class="filter-tag"
+              @click="removeFilter('category')"
+            >
+              {{ getCategoryLabel(activeFilters.category) }}
+              <Icon name="lucide:x" size="12" />
+            </span>
+            <span
+              v-if="activeFilters.priority !== 'all'"
+              class="filter-tag"
+              @click="removeFilter('priority')"
+            >
+              {{ getPriorityLabel(activeFilters.priority) }}
+              <Icon name="lucide:x" size="12" />
+            </span>
+            <span
+              v-if="activeFilters.tag"
+              class="filter-tag"
+              @click="removeFilter('tag')"
+            >
+              #{{ activeFilters.tag }}
+              <Icon name="lucide:x" size="12" />
+            </span>
+          </div>
+          <button class="clear-filters" @click="clearAllFilters">
+            Очистить все
+          </button>
+        </div>
       </div>
 
-      <!-- Empty State -->
-      <div v-else class="empty-state">
-        <div class="empty-illustration">
-          <Icon name="lucide:clipboard-check" size="64" />
-          <div class="empty-dots">
-            <div class="dot" style="--delay: 0"></div>
-            <div class="dot" style="--delay: 0.2"></div>
-            <div class="dot" style="--delay: 0.4"></div>
+      <!-- Tasks Grid -->
+      <div class="tasks-content">
+        <div v-if="filteredTasks.length > 0" class="tasks-grid">
+          <TaskCard
+            v-for="task in paginatedTasks"
+            :key="task.id"
+            :task="task"
+            @toggle-status="toggleTaskStatus(task.id)"
+            @start-timer="startTaskTimer(task)"
+            @edit="openEditModal(task)"
+            @delete="confirmDeleteTask(task.id)"
+            @filter-by-tag="filterByTag"
+          />
+        </div>
+
+        <!-- Empty State -->
+        <div v-else class="empty-state">
+          <div class="empty-content">
+            <div class="empty-icon">
+              <Icon name="lucide:clipboard-list" size="48" />
+            </div>
+            <h3 class="empty-title">{{ emptyStateTitle }}</h3>
+            <p class="empty-description">{{ emptyStateMessage }}</p>
+            <button class="empty-action" @click="openCreateModal">
+              <Icon name="lucide:plus" size="16" />
+              <span>Создать задачу</span>
+            </button>
           </div>
         </div>
 
-        <div class="empty-content">
-          <h3>Задачи не найдены</h3>
-          <p>{{ emptyStateMessage }}</p>
+        <!-- Pagination -->
+        <div v-if="totalPages > 1" class="pagination">
+          <div class="pagination-info">
+            Показано {{ paginatedTasks.length }} из {{ filteredTasks.length }}
+          </div>
+          <div class="pagination-controls">
+            <button
+              class="pagination-button"
+              :disabled="currentPage === 1"
+              @click="prevPage"
+            >
+              <Icon name="lucide:chevron-left" size="16" />
+            </button>
+            <div class="page-numbers">
+              <template v-for="page in visiblePages" :key="page">
+                <button
+                  v-if="page !== '...'"
+                  class="page-button"
+                  :class="{ active: page === currentPage }"
+                  @click="goToPage(page)"
+                >
+                  {{ page }}
+                </button>
+                <span v-else class="page-dots">...</span>
+              </template>
+            </div>
+            <button
+              class="pagination-button"
+              :disabled="currentPage === totalPages"
+              @click="nextPage"
+            >
+              <Icon name="lucide:chevron-right" size="16" />
+            </button>
+          </div>
         </div>
-
-        <div class="empty-actions">
-          <button class="primary-action" @click="openCreateModal">
-            <Icon name="lucide:plus" size="16" />
-            <span>Создать задачу</span>
-          </button>
-          <button
-            class="secondary-action"
-            @click="resetFilters"
-            v-if="hasActiveFilters"
-          >
-            <Icon name="lucide:filter-x" size="16" />
-            <span>Сбросить фильтры</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Pagination -->
-      <div v-if="totalPages > 1" class="pagination">
-        <button
-          class="pagination-button prev"
-          :disabled="currentPage === 1"
-          @click="prevPage"
-        >
-          <Icon name="lucide:chevron-left" size="16" />
-        </button>
-
-        <div class="page-info">
-          <span class="page-current">{{ currentPage }}</span>
-          <span class="page-total">/ {{ totalPages }}</span>
-        </div>
-
-        <button
-          class="pagination-button next"
-          :disabled="currentPage === totalPages"
-          @click="nextPage"
-        >
-          <Icon name="lucide:chevron-right" size="16" />
-        </button>
       </div>
     </div>
 
-    <!-- Floating Action Button -->
-    <button class="fab" @click="openCreateModal">
-      <Icon name="lucide:plus" size="20" />
-    </button>
-
     <!-- Modals -->
-    <TaskModal
-      v-if="showTaskModal"
+    <TaskForm
+      :show="showModal"
       :task="editingTask"
-      :mode="modalMode"
-      @close="closeTaskModal"
+      @close="closeModal"
       @save="saveTask"
     />
 
-    <TaskDetailsModal
-      v-if="showDetailsModal"
-      :task="selectedTask"
-      @close="closeDetailsModal"
-      @save="updateTask"
-      @delete="confirmDeleteTask"
-    />
-
-    <DeleteConfirmModal
-      v-if="showDeleteConfirm"
-      @confirm="deleteTask"
-      @cancel="cancelDelete"
-    />
+    <Transition name="fade">
+      <div
+        v-if="showDeleteConfirm"
+        class="modal-overlay"
+        @click.self="cancelDelete"
+      >
+        <div class="confirm-modal">
+          <div class="modal-header">
+            <Icon name="lucide:trash-2" size="20" />
+            <h3>Удалить задачу?</h3>
+          </div>
+          <p class="modal-message">
+            Задача будет удалена без возможности восстановления
+          </p>
+          <div class="modal-actions">
+            <button class="modal-button secondary" @click="cancelDelete">
+              Отмена
+            </button>
+            <button class="modal-button danger" @click="deleteTask">
+              Удалить
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
+import TasksFilters from '@/components/Tasks/TaskFilters.vue'
 // Stores
 const tasksStore = useTasksStore()
 const timerStore = useTimerStore()
 
 // State
-const viewMode = ref<'grid' | 'list'>('grid')
-const showFilters = ref(false)
-const searchQuery = ref('')
-const currentPage = ref(1)
-const itemsPerPage = 8
-
-// Modal states
-const showTaskModal = ref(false)
-const showDetailsModal = ref(false)
+const showModal = ref(false)
 const showDeleteConfirm = ref(false)
 const editingTask = ref<any>(null)
-const selectedTask = ref<any>(null)
 const taskToDelete = ref<string | null>(null)
-const modalMode = ref<'create' | 'edit'>('create')
+const currentPage = ref(1)
+const searchQuery = ref('')
+const activeFilters = ref({
+  status: 'all',
+  category: 'all',
+  priority: 'all',
+  tag: null as string | null,
+})
 
-// Quick filters
-const quickFilters = [
-  { value: 'all', label: 'Все', icon: 'lucide:list' },
-  { value: 'active', label: 'Активные', icon: 'lucide:clock' },
-  { value: 'completed', label: 'Выполненные', icon: 'lucide:check-circle' },
-  { value: 'today', label: 'Сегодня', icon: 'lucide:calendar' },
-]
+// Constants
+const itemsPerPage = 8
+const maxVisiblePages = 5
 
 // Computed
-const filters = computed(() => tasksStore.filters)
-
 const filteredTasks = computed(() => {
-  let tasks = tasksStore.tasks
+  return tasksStore.filteredTasks.filter((task) => {
+    // Search filter
+    if (searchQuery.value) {
+      const searchLower = searchQuery.value.toLowerCase()
+      const matchesTitle = task.title.toLowerCase().includes(searchLower)
+      const matchesDesc = task.description?.toLowerCase().includes(searchLower)
+      if (!matchesTitle && !matchesDesc) return false
+    }
 
-  // Apply search
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    tasks = tasks.filter(
-      (task) =>
-        task.title.toLowerCase().includes(query) ||
-        task.description?.toLowerCase().includes(query) ||
-        task.tags.some((tag) => tag.toLowerCase().includes(query))
-    )
-  }
+    // Tag filter
+    if (
+      activeFilters.value.tag &&
+      !task.tags.includes(activeFilters.value.tag)
+    ) {
+      return false
+    }
 
-  // Apply filters
-  return tasks
-    .filter((task) => {
-      // Status filter
-      if (filters.value.status === 'today') {
-        const today = new Date().toDateString()
-        return new Date(task.createdAt).toDateString() === today
-      }
-      if (
-        filters.value.status !== 'all' &&
-        task.status !== filters.value.status
-      ) {
-        return false
-      }
-
-      // Category filter
-      if (
-        filters.value.category !== 'all' &&
-        task.category !== filters.value.category
-      ) {
-        return false
-      }
-
-      // Priority filter
-      if (
-        filters.value.priority !== 'all' &&
-        task.priority !== filters.value.priority
-      ) {
-        return false
-      }
-
-      return true
-    })
-    .sort((a, b) => {
-      // Sort by priority (high -> medium -> low)
-      const priorityOrder = { high: 3, medium: 2, low: 1 }
-      if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-        return priorityOrder[b.priority] - priorityOrder[a.priority]
-      }
-
-      // Then by due date (closest first)
-      if (a.dueAt && b.dueAt) {
-        return new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime()
-      }
-      if (a.dueAt) return -1
-      if (b.dueAt) return 1
-
-      // Then by creation date (newest first)
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    })
+    return true
+  })
 })
 
 const paginatedTasks = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
-  const end = start + itemsPerPage
-  return filteredTasks.value.slice(start, end)
+  return filteredTasks.value.slice(start, start + itemsPerPage)
 })
 
 const totalPages = computed(() => {
   return Math.ceil(filteredTasks.value.length / itemsPerPage)
 })
 
-const activeTasksCount = computed(() => {
-  return tasksStore.tasks.filter((t) => t.status === 'active').length
-})
-
-const completedTasksCount = computed(() => {
-  return tasksStore.tasks.filter((t) => t.status === 'completed').length
-})
-
-const totalTimeSpent = computed(() => {
-  const totalMinutes = tasksStore.tasks.reduce(
-    (sum, task) => sum + (task.spentMinutes || 0),
-    0
-  )
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-  return hours > 0 ? `${hours}ч ${minutes}м` : `${minutes}м`
-})
-
 const hasActiveFilters = computed(() => {
   return (
-    filters.value.status !== 'all' ||
-    filters.value.category !== 'all' ||
-    filters.value.priority !== 'all' ||
-    searchQuery.value !== ''
+    activeFilters.value.status !== 'all' ||
+    activeFilters.value.category !== 'all' ||
+    activeFilters.value.priority !== 'all' ||
+    activeFilters.value.tag !== null
   )
 })
 
-const selectedCategories = computed(() => {
-  if (filters.value.category === 'all') return []
-  const category = tasksStore.categories.find(
-    (c) => c.id === filters.value.category
-  )
-  return category ? [category] : []
+const emptyStateTitle = computed(() => {
+  if (searchQuery.value) return 'Задачи не найдены'
+  if (hasActiveFilters.value) return 'Нет подходящих задач'
+  return 'Задач пока нет'
 })
 
 const emptyStateMessage = computed(() => {
-  if (searchQuery.value) return 'Попробуйте изменить условия поиска'
-  if (hasActiveFilters.value) return 'Попробуйте сбросить фильтры'
-  return 'Создайте свою первую задачу, чтобы начать'
+  if (searchQuery.value) return 'Попробуйте другой запрос'
+  if (hasActiveFilters.value) return 'Изменение фильтров поможет'
+  return 'Создайте свою первую задачу'
+})
+
+const visiblePages = computed(() => {
+  const pages = []
+  const total = totalPages.value
+  const current = currentPage.value
+
+  if (total <= maxVisiblePages) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+  } else {
+    if (current <= 3) {
+      for (let i = 1; i <= 4; i++) pages.push(i)
+      pages.push('...', total)
+    } else if (current >= total - 2) {
+      pages.push(1, '...')
+      for (let i = total - 3; i <= total; i++) pages.push(i)
+    } else {
+      pages.push(1, '...')
+      for (let i = current - 1; i <= current + 1; i++) pages.push(i)
+      pages.push('...', total)
+    }
+  }
+
+  return pages
 })
 
 // Methods
-const applyQuickFilter = (status: string) => {
-  tasksStore.setFilter('status', status)
+const formatTime = (minutes: number) => {
+  if (!minutes || minutes === 0) return '0'
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
 }
 
-const updateFilters = (newFilters: any) => {
-  tasksStore.setFilter('status', newFilters.status)
-  tasksStore.setFilter('category', newFilters.category)
-  tasksStore.setFilter('priority', newFilters.priority)
-}
-
-const resetFilters = () => {
-  tasksStore.resetFilters()
-  searchQuery.value = ''
+const handleFilterChange = (filters: any) => {
+  activeFilters.value = {
+    ...activeFilters.value,
+    status: filters.status,
+    category: filters.category,
+    priority: filters.priority,
+  }
   currentPage.value = 1
 }
 
-const setFilter = (type: 'status' | 'category' | 'priority', value: string) => {
-  tasksStore.setFilter(type, value)
-}
-
-const removeCategoryFilter = () => {
-  tasksStore.setFilter('category', 'all')
-}
-
-const handleSearch = debounce(() => {
+const handleSearch = (query: string) => {
+  searchQuery.value = query
   currentPage.value = 1
-}, 300)
+}
 
-const clearSearch = () => {
+const filterByTag = (tag: string) => {
+  activeFilters.value.tag = tag
+  currentPage.value = 1
+}
+
+const removeFilter = (type: keyof typeof activeFilters.value) => {
+  if (type === 'tag') {
+    activeFilters.value[type] = null
+  } else {
+    activeFilters.value[type] = 'all' as any
+  }
+  currentPage.value = 1
+}
+
+const clearAllFilters = () => {
+  activeFilters.value = {
+    status: 'all',
+    category: 'all',
+    priority: 'all',
+    tag: null,
+  }
   searchQuery.value = ''
+  currentPage.value = 1
 }
 
 const getStatusLabel = (status: string) => {
-  const filter = quickFilters.find((f) => f.value === status)
-  return filter?.label || status
+  const labels: Record<string, string> = {
+    all: 'Все',
+    active: 'Активные',
+    completed: 'Выполненные',
+  }
+  return labels[status] || status
+}
+
+const getCategoryLabel = (categoryId: string) => {
+  if (categoryId === 'all') return 'Все категории'
+  const category = tasksStore.categories.find((cat) => cat.id === categoryId)
+  return category?.name || categoryId
 }
 
 const getPriorityLabel = (priority: string) => {
-  const labels = { high: 'Высокий', medium: 'Средний', low: 'Низкий' }
-  return labels[priority as keyof typeof labels] || priority
+  const labels: Record<string, string> = {
+    all: 'Все приоритеты',
+    high: 'Высокий',
+    medium: 'Средний',
+    low: 'Низкий',
+  }
+  return labels[priority] || priority
 }
 
 // Task actions
@@ -433,31 +358,19 @@ const startTaskTimer = (task: any) => {
   navigateTo('/timer')
 }
 
-const openTaskDetails = (task: any) => {
-  selectedTask.value = { ...task }
-  showDetailsModal.value = true
-}
-
 const openCreateModal = () => {
   editingTask.value = null
-  modalMode.value = 'create'
-  showTaskModal.value = true
+  showModal.value = true
 }
 
 const openEditModal = (task: any) => {
   editingTask.value = { ...task }
-  modalMode.value = 'edit'
-  showTaskModal.value = true
+  showModal.value = true
 }
 
-const closeTaskModal = () => {
-  showTaskModal.value = false
+const closeModal = () => {
+  showModal.value = false
   editingTask.value = null
-}
-
-const closeDetailsModal = () => {
-  showDetailsModal.value = false
-  selectedTask.value = null
 }
 
 const saveTask = (taskData: any) => {
@@ -466,25 +379,6 @@ const saveTask = (taskData: any) => {
   } else {
     tasksStore.addTask(taskData)
   }
-  closeTaskModal()
-}
-
-const updateTask = (taskId: string, updates: any) => {
-  tasksStore.updateTask(taskId, updates)
-}
-
-const duplicateTask = (task: any) => {
-  const { id, createdAt, ...taskData } = task
-  tasksStore.addTask({
-    ...taskData,
-    title: `${task.title} (копия)`,
-  })
-}
-
-const archiveTask = (task: any) => {
-  tasksStore.updateTask(task.id, {
-    status: task.status === 'active' ? 'completed' : 'active',
-  })
 }
 
 const confirmDeleteTask = (taskId: string) => {
@@ -507,23 +401,23 @@ const deleteTask = () => {
 
 // Pagination
 const prevPage = () => {
-  if (currentPage.value > 1) {
-    currentPage.value--
-  }
+  if (currentPage.value > 1) currentPage.value--
 }
 
 const nextPage = () => {
-  if (currentPage.value < totalPages.value) {
-    currentPage.value++
-  }
+  if (currentPage.value < totalPages.value) currentPage.value++
 }
 
-// Watch for changes
-watch([() => filters.value, searchQuery], () => {
+const goToPage = (page: number) => {
+  currentPage.value = page
+}
+
+// Watch for filter changes
+watch([() => activeFilters.value, searchQuery], () => {
   currentPage.value = 1
 })
 
-// Initialize
+// Initialize stores
 onMounted(() => {
   tasksStore.initialize()
   timerStore.initialize()
@@ -531,125 +425,114 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.tasks-page {
+.tasks-dashboard {
   min-height: 100vh;
-  padding-bottom: calc(80px + env(safe-area-inset-bottom));
-  position: relative;
+  background: var(--primary-bg);
+  padding-bottom: var(--space-16);
 }
 
-.page-header {
-  background: var(--primary-bg);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  padding: var(--space-6) var(--space-5) var(--space-4);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
+// Dashboard Header
+.dashboard-header {
+  @include card;
+  margin: var(--space-4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+
+  @include breakpoint(md) {
+    margin: var(--space-6);
+  }
+
+  @include breakpoint(lg) {
+    margin: var(--space-6) auto;
+    max-width: 1400px;
+  }
 }
 
 .header-content {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
+  padding: var(--space-6) var(--space-5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 
   @include breakpoint(md) {
     flex-direction: row;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
+    padding: var(--space-6);
   }
 }
 
-.title-section {
-  h1 {
-    font-size: var(--text-3xl);
-    font-weight: 700;
-    background: linear-gradient(135deg, var(--text-primary), var(--accent));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+.header-info {
+  flex: 1;
+}
+
+.dashboard-title {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+  @include gradient-text;
+
+  @include breakpoint(md) {
+    font-size: var(--text-4xl);
     margin-bottom: var(--space-3);
   }
 }
 
-.stats-overview {
-  display: flex;
-  gap: var(--space-4);
-}
-
-.stat {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-
-  .stat-value {
-    font-size: var(--text-xl);
-    font-weight: 700;
-    color: var(--text-primary);
-  }
-
-  .stat-label {
-    font-size: var(--text-xs);
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-}
-
-.header-actions {
-  display: flex;
-  gap: var(--space-3);
-  align-items: center;
-}
-
-.view-toggle {
-  display: flex;
-  gap: var(--space-1);
-  background: rgba(255, 255, 255, 0.05);
-  padding: var(--space-1);
-  border-radius: var(--radius-button);
-}
-
-.view-button {
+.action-button {
   @include button-reset;
   @include flex-center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-button);
-  color: var(--text-secondary);
-  transition: all var(--transition-base);
-
-  &.active {
-    background: var(--card-bg);
-    color: var(--accent);
-    box-shadow: var(--shadow-sm);
-  }
-
-  &:hover:not(.active) {
-    background: rgba(255, 255, 255, 0.1);
-  }
-}
-
-.create-button {
-  @include button-reset;
-  display: flex;
-  align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  background: var(--accent);
-  color: white;
+  padding: var(--space-3) var(--space-5);
   border-radius: var(--radius-button);
-  font-weight: 600;
   font-size: var(--text-sm);
-  transition: all var(--transition-base);
+  font-weight: var(--font-medium);
+  transition: all var(--duration-base);
 
-  &:hover {
-    background: var(--accent-secondary);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-glow);
+  &.primary {
+    background: var(--accent-primary);
+    color: white;
+
+    &:hover {
+      background: var(--accent-secondary);
+      transform: translateY(-1px);
+      @include elevation(2);
+    }
   }
 }
 
-.quick-actions {
+// Compact Filters
+.compact-filters {
+  padding: var(--space-4) var(--space-5);
+  background: rgba(255, 255, 255, 0.02);
+
+  @include breakpoint(md) {
+    padding: var(--space-4) var(--space-6);
+  }
+}
+
+// Dashboard Content
+.dashboard-content {
+  padding: var(--space-4);
+
+  @include breakpoint(md) {
+    padding: var(--space-6);
+  }
+
+  @include breakpoint(lg) {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+}
+
+// Active Filters Bar
+.active-filters-bar {
+  @include card;
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.active-filters {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -660,120 +543,14 @@ onMounted(() => {
   }
 }
 
-.action-group {
-  display: flex;
-  gap: var(--space-1);
-  overflow-x: auto;
-  padding-bottom: var(--space-1);
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-.quick-filter {
-  @include button-reset;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-button);
+.filters-label {
   font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   color: var(--text-secondary);
-  white-space: nowrap;
-  transition: all var(--transition-base);
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-  }
-
-  &.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: white;
-
-    &:hover {
-      background: var(--accent-secondary);
-    }
-  }
+  flex-shrink: 0;
 }
 
-.search-container {
-  flex: 1;
-  position: relative;
-  max-width: 400px;
-
-  @include breakpoint(sm) {
-    margin-left: auto;
-  }
-}
-
-.search-icon {
-  position: absolute;
-  left: var(--space-3);
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-secondary);
-  pointer-events: none;
-}
-
-.search-input {
-  width: 100%;
-  padding: var(--space-3) var(--space-10) var(--space-3) var(--space-9);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-button);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  transition: all var(--transition-base);
-
-  &:focus {
-    outline: none;
-    border-color: var(--accent);
-    background: rgba(93, 95, 239, 0.05);
-    box-shadow: 0 0 0 3px rgba(93, 95, 239, 0.1);
-  }
-
-  &::placeholder {
-    color: var(--text-secondary);
-  }
-}
-
-.clear-search {
-  @include button-reset;
-  @include flex-center;
-  position: absolute;
-  right: var(--space-3);
-  top: 50%;
-  transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.1);
-  transition: all var(--transition-base);
-
-  &:hover {
-    color: var(--text-primary);
-    background: rgba(255, 255, 255, 0.15);
-  }
-}
-
-.active-filters-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-5);
-  background: rgba(93, 95, 239, 0.05);
-  border-bottom: 1px solid rgba(93, 95, 239, 0.1);
-  animation: slide-down 0.3s ease-out;
-}
-
-.filters-tags {
+.filter-tags {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
@@ -784,18 +561,17 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  background: rgba(93, 95, 239, 0.15);
-  color: var(--accent);
+  padding: var(--space-1) var(--space-3);
+  background: rgba(119, 119, 119, 0.1);
+  color: var(--accent-primary);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
-  font-weight: 500;
+  font-weight: var(--font-medium);
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: all var(--duration-base);
 
   &:hover {
-    background: rgba(93, 95, 239, 0.25);
-    transform: translateY(-1px);
+    background: rgba(119, 119, 119, 0.2);
 
     :deep(svg) {
       color: var(--error);
@@ -805,173 +581,113 @@ onMounted(() => {
 
 .clear-filters {
   @include button-reset;
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
   font-size: var(--text-sm);
   color: var(--text-secondary);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
-  transition: all var(--transition-base);
-  white-space: nowrap;
+  transition: all var(--duration-base);
+  flex-shrink: 0;
 
   &:hover {
-    color: var(--error);
-    background: rgba(248, 113, 113, 0.1);
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
   }
 }
 
-.tasks-content {
-  padding: var(--space-5);
-}
+// Tasks Content
 
-.tasks-container {
-  &.grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--space-4);
+.tasks-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
 
-    @include breakpoint(sm) {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    @include breakpoint(lg) {
-      grid-template-columns: repeat(3, 1fr);
-    }
+  @include breakpoint(sm) {
+    grid-template-columns: repeat(2, 1fr);
   }
 
-  &.list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
+  @include breakpoint(lg) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  @include breakpoint(xl) {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
+// Empty State
 .empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  padding: var(--space-16) var(--space-4);
   text-align: center;
-  padding: var(--space-12) var(--space-4);
-  color: var(--text-secondary);
 }
 
-.empty-illustration {
-  position: relative;
-  margin-bottom: var(--space-6);
+.empty-content {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.empty-icon {
+  @include flex-center;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto var(--space-6);
+  border-radius: var(--radius-full);
+  background: rgba(119, 119, 119, 0.1);
 
   :deep(svg) {
-    color: var(--accent);
+    color: var(--accent-primary);
     opacity: 0.5;
   }
 }
 
-.empty-dots {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  gap: var(--space-2);
-
-  .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--accent);
-    animation: bounce 1.5s infinite calc(var(--delay) * 1s);
-    opacity: 0.7;
-  }
+.empty-title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
 }
 
-@keyframes bounce {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-.empty-content {
+.empty-description {
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
   margin-bottom: var(--space-6);
-  max-width: 400px;
-
-  h3 {
-    font-size: var(--text-xl);
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: var(--space-2);
-  }
-
-  p {
-    color: var(--text-secondary);
-    line-height: 1.6;
-  }
 }
 
-.empty-actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  width: 100%;
-  max-width: 300px;
-
-  @include breakpoint(sm) {
-    flex-direction: row;
-  }
-}
-
-.primary-action {
+.empty-action {
   @include button-reset;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  @include flex-center;
   gap: var(--space-2);
-  flex: 1;
-  padding: var(--space-3) var(--space-4);
-  background: var(--accent);
+  padding: var(--space-3) var(--space-5);
+  background: var(--accent-primary);
   color: white;
   border-radius: var(--radius-button);
-  font-weight: 600;
-  transition: all var(--transition-base);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  transition: all var(--duration-base);
 
   &:hover {
     background: var(--accent-secondary);
     transform: translateY(-1px);
-    box-shadow: var(--shadow-glow);
+    @include elevation(2);
   }
 }
 
-.secondary-action {
-  @include button-reset;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  flex: 1;
-  padding: var(--space-3) var(--space-4);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-secondary);
-  border-radius: var(--radius-button);
-  font-weight: 500;
-  transition: all var(--transition-base);
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
-  }
-}
-
+// Pagination
 .pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: var(--space-4);
   margin-top: var(--space-8);
-  padding-top: var(--space-4);
+  padding-top: var(--space-6);
   border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.pagination-info {
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
+}
+
+.pagination-controls {
+  @include flex-center;
+  gap: var(--space-4);
 }
 
 .pagination-button {
@@ -981,13 +697,14 @@ onMounted(() => {
   height: 40px;
   border-radius: var(--radius-button);
   background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--text-secondary);
-  transition: all var(--transition-base);
+  transition: all var(--duration-base);
 
   &:hover:not(:disabled) {
-    background: rgba(93, 95, 239, 0.1);
-    color: var(--accent);
-    transform: translateY(-1px);
+    background: rgba(119, 119, 119, 0.1);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
   }
 
   &:disabled {
@@ -996,144 +713,191 @@ onMounted(() => {
   }
 }
 
-.page-info {
+.page-numbers {
   display: flex;
-  align-items: baseline;
   gap: var(--space-1);
+}
+
+.page-button {
+  @include button-reset;
+  @include flex-center;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-button);
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  transition: all var(--duration-base);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  &.active {
+    background: var(--accent-primary);
+    color: white;
+  }
 }
 
-.page-current {
-  color: var(--text-primary);
-}
-
-.page-total {
+.page-dots {
+  @include flex-center;
+  width: 40px;
+  height: 40px;
   color: var(--text-secondary);
 }
 
-.fab {
-  @include button-reset;
-  @include flex-center;
+// Modal Styles
+.modal-overlay {
   position: fixed;
-  bottom: calc(80px + env(safe-area-inset-bottom) + var(--space-4));
-  right: var(--space-4);
-  width: 56px;
-  height: 56px;
-  background: var(--accent);
-  color: white;
-  border-radius: var(--radius-fab);
-  box-shadow: var(--shadow-glow);
-  transition: all var(--transition-base);
-  z-index: 90;
-
-  &:hover {
-    background: var(--accent-secondary);
-    transform: scale(1.1) rotate(90deg);
-  }
-
-  &:active {
-    transform: scale(0.95);
-  }
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: var(--z-modal);
+  @include flex-center;
+  padding: var(--space-4);
 }
 
-@keyframes slide-down {
+.confirm-modal {
+  @include card;
+  width: 100%;
+  max-width: 400px;
+  padding: var(--space-6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: modal-scale var(--duration-base) var(--ease-out);
+}
+
+@keyframes modal-scale {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: scale(0.9);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: scale(1);
   }
 }
 
-// Light theme
-[data-theme='light'] {
-  .page-header {
-    background: var(--surface-bg);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+
+  :deep(svg) {
+    color: var(--error);
   }
 
-  .view-toggle {
-    background: rgba(0, 0, 0, 0.05);
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+    margin: 0;
   }
+}
 
-  .view-button {
-    &.active {
-      background: white;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-  }
+.modal-message {
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+  margin-bottom: var(--space-6);
+}
 
-  .quick-filter {
-    background: rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.1);
+.modal-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.modal-button {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  border-radius: var(--radius-button);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: all var(--duration-base);
+
+  &.secondary {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
 
     &:hover {
-      background: rgba(0, 0, 0, 0.1);
-      border-color: rgba(0, 0, 0, 0.2);
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
     }
   }
 
-  .search-input {
+  &.danger {
+    background: var(--error);
+    color: white;
+
+    &:hover {
+      background: #ef4444;
+      transform: translateY(-1px);
+    }
+  }
+}
+
+// Animations
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity var(--duration-base);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+// Light Theme
+[data-theme='light'] {
+  .dashboard-header,
+  .active-filters-bar,
+  .tasks-content {
+    border-color: rgba(0, 0, 0, 0.05);
+  }
+
+  .stat-badge {
     background: rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-
-    &:focus {
-      background: rgba(93, 95, 239, 0.05);
-    }
-  }
-
-  .clear-search {
-    background: rgba(0, 0, 0, 0.1);
-  }
-
-  .active-filters-bar {
-    background: rgba(93, 95, 239, 0.03);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.05);
   }
 
   .filter-tag {
-    background: rgba(93, 95, 239, 0.1);
+    background: rgba(0, 0, 0, 0.1);
   }
 
   .clear-filters:hover {
-    background: rgba(248, 113, 113, 0.1);
-  }
-
-  .pagination {
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
-  }
-
-  .pagination-button {
     background: rgba(0, 0, 0, 0.05);
   }
 
-  .secondary-action {
+  .pagination-button,
+  .page-button:hover {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.1);
+  }
+
+  .modal-button.secondary {
     background: rgba(0, 0, 0, 0.05);
   }
 }
 
-// Responsive
+// Responsive Adjustments
 @include breakpoint(sm) {
-  .page-header {
-    padding: var(--space-6) var(--space-6) var(--space-4);
+  .header-stats {
+    gap: var(--space-4);
   }
+}
 
-  .tasks-content {
+@include breakpoint(md) {
+  .header-content {
     padding: var(--space-6);
   }
 
-  .fab {
-    bottom: calc(80px + env(safe-area-inset-bottom) + var(--space-6));
-    right: var(--space-6);
-  }
-}
-
-@include breakpoint(lg) {
-  .tasks-container.grid {
-    gap: var(--space-5);
+  .compact-filters {
+    padding: var(--space-4) var(--space-6);
   }
 }
 </style>
