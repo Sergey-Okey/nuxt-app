@@ -1,426 +1,403 @@
 <template>
-  <Teleport to="body">
-    <Transition name="modal">
-      <div
-        v-if="modelValue"
-        class="modal-overlay"
-        @click.self="handleOverlayClick"
-      >
-        <div
-          ref="modalRef"
-          :class="modalClasses"
-          :style="modalStyles"
-          role="dialog"
-          aria-modal="true"
-          :aria-labelledby="titleId"
-          :aria-describedby="descriptionId"
-        >
-          <!-- Header -->
-          <header v-if="$slots.header || title" class="modal-header">
-            <slot name="header">
-              <div class="modal-title">
-                <h3 :id="titleId" class="modal-title-text">
-                  {{ title }}
-                </h3>
-                <div v-if="subtitle" class="modal-subtitle">
-                  {{ subtitle }}
-                </div>
-              </div>
-            </slot>
+  <button
+    :class="buttonClasses"
+    :disabled="disabled || loading"
+    :type="type"
+    :style="buttonStyles"
+    @click="handleClick"
+  >
+    <!-- Loading state -->
+    <div v-if="loading" class="button__loading">
+      <div class="button__spinner" :style="spinnerStyles"></div>
+      <span v-if="!iconOnly" class="button__loading-text">
+        {{ loadingText || label }}
+      </span>
+    </div>
 
-            <!-- Close button -->
-            <Button
-              v-if="closable"
-              variant="text"
-              size="sm"
-              icon-only
-              class="modal-close"
-              @click="handleClose"
-              aria-label="Close modal"
-            >
-              <Icon name="close" size="20" />
-            </Button>
-          </header>
+    <!-- Normal state -->
+    <div v-else class="button__content">
+      <!-- Left icon -->
+      <span v-if="iconLeft || $slots.iconLeft" class="button__icon-left">
+        <slot name="iconLeft">
+          <Icon v-if="iconLeft" :name="iconLeft" :size="iconSize" />
+        </slot>
+      </span>
 
-          <!-- Content -->
-          <div class="modal-content">
-            <slot />
-          </div>
+      <!-- Label/text -->
+      <span v-if="!iconOnly" class="button__label">
+        <slot>{{ label }}</slot>
+      </span>
 
-          <!-- Footer -->
-          <footer v-if="$slots.footer" class="modal-footer">
-            <slot name="footer" />
-          </footer>
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
+      <!-- Right icon -->
+      <span v-if="iconRight || $slots.iconRight" class="button__icon-right">
+        <slot name="iconRight">
+          <Icon v-if="iconRight" :name="iconRight" :size="iconSize" />
+        </slot>
+      </span>
+    </div>
+  </button>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { computed } from 'vue'
 
-export interface ModalProps {
-  // State
-  modelValue: boolean
-  title?: string
-  subtitle?: string
-
-  // Configuration
-  closable?: boolean
-  closeOnOverlayClick?: boolean
-  closeOnEsc?: boolean
-  persistent?: boolean
-  fullscreen?: boolean
-  maxWidth?: string
-
-  // Accessibility
-  ariaLabel?: string
-
-  // Styling
-  padding?: 'none' | 'sm' | 'md' | 'lg'
-  rounded?: 'sm' | 'md' | 'lg' | 'xl'
-  shadow?: 'none' | 'sm' | 'md' | 'lg' | 'xl'
+export interface ButtonProps {
+  variant?: 'primary' | 'secondary' | 'ghost' | 'text' | 'danger'
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+  label?: string
+  iconLeft?: string
+  iconRight?: string
+  iconOnly?: boolean
+  disabled?: boolean
+  loading?: boolean
+  loadingText?: string
+  fullWidth?: boolean
+  rounded?: boolean
+  circle?: boolean
+  type?: 'button' | 'submit' | 'reset'
+  color?: string
+  textColor?: string
+  borderColor?: string
 }
 
-const props = withDefaults(defineProps<ModalProps>(), {
-  closable: true,
-  closeOnOverlayClick: true,
-  closeOnEsc: true,
-  persistent: false,
-  fullscreen: false,
-  maxWidth: '500px',
-  padding: 'md',
-  rounded: 'lg',
-  shadow: 'xl',
+const props = withDefaults(defineProps<ButtonProps>(), {
+  variant: 'primary',
+  size: 'md',
+  type: 'button',
+  disabled: false,
+  loading: false,
+  iconOnly: false,
+  fullWidth: false,
+  rounded: false,
+  circle: false,
 })
 
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean]
-  open: []
-  close: []
-  'overlay-click': [event: MouseEvent]
+  click: [event: MouseEvent]
 }>()
 
-const modalRef = ref<HTMLElement>()
-const titleId = `modal-title-${Math.random().toString(36).substr(2, 9)}`
-const descriptionId = `modal-description-${Math.random()
-  .toString(36)
-  .substr(2, 9)}`
+const sizeClasses = {
+  xs: 'button--xs',
+  sm: 'button--sm',
+  md: 'button--md',
+  lg: 'button--lg',
+  xl: 'button--xl',
+}
 
-// Classes
-const modalClasses = computed(() => [
-  'modal',
-  `modal--padding-${props.padding}`,
-  `modal--rounded-${props.rounded}`,
-  `modal--shadow-${props.shadow}`,
+const variantClasses = {
+  primary: 'button--primary',
+  secondary: 'button--secondary',
+  ghost: 'button--ghost',
+  text: 'button--text',
+  danger: 'button--danger',
+}
+
+const iconSizeMap = {
+  xs: '16',
+  sm: '18',
+  md: '20',
+  lg: '22',
+  xl: '24',
+}
+
+const iconSize = computed(() => iconSizeMap[props.size])
+
+const buttonClasses = computed(() => [
+  'button',
+  variantClasses[props.variant],
+  sizeClasses[props.size],
   {
-    'modal--fullscreen': props.fullscreen,
-    'modal--has-header': props.$slots.header || props.title,
-    'modal--has-footer': props.$slots.footer,
+    'button--disabled': props.disabled,
+    'button--loading': props.loading,
+    'button--full-width': props.fullWidth,
+    'button--rounded': props.rounded,
+    'button--circle': props.circle,
+    'button--icon-only': props.iconOnly,
   },
 ])
 
-// Styles
-const modalStyles = computed(() => ({
-  maxWidth: props.fullscreen ? '100%' : props.maxWidth,
-}))
+const buttonStyles = computed(() => {
+  const styles: Record<string, string> = {}
 
-// Methods
-const handleOverlayClick = (event: MouseEvent) => {
-  if (props.closeOnOverlayClick && !props.persistent) {
-    handleClose()
+  if (props.color) {
+    styles['--button-bg'] = props.color
+    styles['--button-bg-hover'] = props.color
   }
-  emit('overlay-click', event)
-}
 
-const handleClose = () => {
-  if (!props.persistent) {
-    emit('update:modelValue', false)
-    emit('close')
+  if (props.textColor) {
+    styles['--button-text'] = props.textColor
   }
-}
 
-const handleKeydown = (event: KeyboardEvent) => {
-  if (event.key === 'Escape' && props.closeOnEsc && !props.persistent) {
-    handleClose()
+  if (props.borderColor) {
+    styles['--button-border'] = props.borderColor
   }
-}
 
-// Focus trap
-const handleFocusTrap = (event: KeyboardEvent) => {
-  if (event.key === 'Tab' && modalRef.value) {
-    const focusable = modalRef.value.querySelectorAll(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    )
+  return styles
+})
 
-    if (focusable.length === 0) return
-
-    const first = focusable[0] as HTMLElement
-    const last = focusable[focusable.length - 1] as HTMLElement
-
-    if (event.shiftKey) {
-      if (document.activeElement === first) {
-        last.focus()
-        event.preventDefault()
-      }
-    } else {
-      if (document.activeElement === last) {
-        first.focus()
-        event.preventDefault()
-      }
-    }
+const spinnerStyles = computed(() => {
+  const sizeMap = {
+    xs: '12px',
+    sm: '14px',
+    md: '16px',
+    lg: '18px',
+    xl: '20px',
   }
-}
 
-// Lifecycle
-onMounted(() => {
-  if (props.modelValue) {
-    document.addEventListener('keydown', handleKeydown)
-    document.addEventListener('keydown', handleFocusTrap)
-    document.body.style.overflow = 'hidden'
+  return {
+    width: sizeMap[props.size],
+    height: sizeMap[props.size],
+    borderWidth: props.size === 'xs' ? '2px' : '3px',
   }
 })
 
-onUnmounted(() => {
-  document.removeEventListener('keydown', handleKeydown)
-  document.removeEventListener('keydown', handleFocusTrap)
-  document.body.style.overflow = ''
-})
-
-// Watch modelValue changes
-watch(
-  () => props.modelValue,
-  (isOpen) => {
-    if (isOpen) {
-      emit('open')
-      document.addEventListener('keydown', handleKeydown)
-      document.addEventListener('keydown', handleFocusTrap)
-      document.body.style.overflow = 'hidden'
-
-      // Focus first focusable element
-      nextTick(() => {
-        const focusable = modalRef.value?.querySelector(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        ) as HTMLElement
-        focusable?.focus()
-      })
-    } else {
-      document.removeEventListener('keydown', handleKeydown)
-      document.removeEventListener('keydown', handleFocusTrap)
-      document.body.style.overflow = ''
-    }
+const handleClick = (event: MouseEvent) => {
+  if (!props.disabled && !props.loading) {
+    emit('click', event)
   }
-)
+}
 </script>
 
 <style lang="scss" scoped>
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--overlay-bg);
-  backdrop-filter: blur(4px);
+.button {
+  position: relative;
+  font-family: var(--font-family-primary);
+  font-weight: var(--font-medium);
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all var(--duration-200) var(--ease-in-out);
+  border: 1px solid transparent;
+  user-select: none;
+  touch-action: manipulation;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--text-primary);
+    outline-offset: 2px;
+  }
+
+  &--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  &--loading {
+    cursor: wait;
+
+    .button__content {
+      opacity: 0;
+    }
+  }
+
+  &--full-width {
+    width: 100%;
+  }
+
+  &--circle {
+    border-radius: 50%;
+    padding: 0 !important;
+    aspect-ratio: 1/1;
+  }
+
+  &--rounded {
+    border-radius: var(--radius-full);
+  }
+
+  &--icon-only {
+    padding: 0 !important;
+    aspect-ratio: 1/1;
+  }
+}
+
+// Variant styles
+.button--primary {
+  background: var(--text-primary);
+  color: var(--primary-bg);
+  border-color: var(--text-primary);
+
+  &:not(.button--disabled):hover {
+    background: var(--text-secondary);
+    border-color: var(--text-secondary);
+  }
+
+  &:not(.button--disabled):active {
+    background: var(--text-muted);
+    border-color: var(--text-muted);
+  }
+}
+
+.button--secondary {
+  background: var(--surface-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border-light);
+
+  &:not(.button--disabled):hover {
+    background: var(--hover-bg);
+    border-color: var(--border-hover);
+  }
+
+  &:not(.button--disabled):active {
+    background: var(--active-bg);
+  }
+}
+
+.button--ghost {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-light);
+
+  &:not(.button--disabled):hover {
+    background: var(--hover-bg);
+    border-color: var(--border-hover);
+  }
+
+  &:not(.button--disabled):active {
+    background: var(--active-bg);
+  }
+}
+
+.button--text {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid transparent;
+
+  &:not(.button--disabled):hover {
+    background: var(--hover-bg);
+  }
+
+  &:not(.button--disabled):active {
+    background: var(--active-bg);
+  }
+}
+
+.button--danger {
+  background: var(--error);
+  color: var(--text-primary);
+  border: 1px solid var(--error);
+
+  &:not(.button--disabled):hover {
+    opacity: 0.8;
+  }
+
+  &:not(.button--disabled):active {
+    opacity: 0.6;
+  }
+}
+
+// Size styles
+.button--xs {
+  font-size: var(--text-xs);
+  min-height: 28px;
+  padding: var(--space-1) var(--space-3);
+  gap: var(--space-1);
+
+  &.button--circle,
+  &.button--icon-only {
+    width: 28px;
+    min-height: 28px;
+  }
+}
+
+.button--sm {
+  font-size: var(--text-sm);
+  min-height: 36px;
+  padding: var(--space-2) var(--space-4);
+  gap: var(--space-2);
+
+  &.button--circle,
+  &.button--icon-only {
+    width: 36px;
+    min-height: 36px;
+  }
+}
+
+.button--md {
+  font-size: var(--text-base);
+  min-height: 44px;
+  padding: var(--space-3) var(--space-5);
+  gap: var(--space-2);
+
+  &.button--circle,
+  &.button--icon-only {
+    width: 44px;
+    min-height: 44px;
+  }
+}
+
+.button--lg {
+  font-size: var(--text-lg);
+  min-height: 52px;
+  padding: var(--space-3) var(--space-6);
+  gap: var(--space-3);
+
+  &.button--circle,
+  &.button--icon-only {
+    width: 52px;
+    min-height: 52px;
+  }
+}
+
+.button--xl {
+  font-size: var(--text-xl);
+  min-height: 60px;
+  padding: var(--space-4) var(--space-8);
+  gap: var(--space-3);
+
+  &.button--circle,
+  &.button--icon-only {
+    width: 60px;
+    min-height: 60px;
+  }
+}
+
+// Content wrapper
+.button__content {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-4);
-  z-index: var(--z-modal);
-  animation: overlay-fade-in var(--duration-200) var(--ease-out);
-}
-
-.modal {
-  background: var(--card-bg);
-  border: 1px solid var(--border-light);
-  display: flex;
-  flex-direction: column;
-  max-height: 90vh;
+  gap: inherit;
   width: 100%;
-  animation: modal-slide-up var(--duration-300) var(--ease-out);
-  overflow: hidden;
-
-  // Fullscreen
-  &--fullscreen {
-    max-height: 100vh;
-    height: 100vh;
-    border-radius: 0;
-    border: none;
-  }
 }
 
-// Padding variants
-.modal--padding-none {
-  .modal-header,
-  .modal-content,
-  .modal-footer {
-    padding: 0;
-  }
-}
-
-.modal--padding-sm {
-  .modal-header,
-  .modal-content,
-  .modal-footer {
-    padding: var(--space-4);
-  }
-}
-
-.modal--padding-md {
-  .modal-header,
-  .modal-content,
-  .modal-footer {
-    padding: var(--space-6);
-  }
-}
-
-.modal--padding-lg {
-  .modal-header,
-  .modal-content,
-  .modal-footer {
-    padding: var(--space-8);
-  }
-}
-
-// Rounded variants
-.modal--rounded-sm {
-  border-radius: var(--radius-sm);
-}
-
-.modal--rounded-md {
-  border-radius: var(--radius-md);
-}
-
-.modal--rounded-lg {
-  border-radius: var(--radius-lg);
-}
-
-.modal--rounded-xl {
-  border-radius: var(--radius-xl);
-}
-
-// Shadow variants
-.modal--shadow-none {
-  box-shadow: none;
-}
-
-.modal--shadow-sm {
-  box-shadow: var(--shadow-sm);
-}
-
-.modal--shadow-md {
-  box-shadow: var(--shadow-md);
-}
-
-.modal--shadow-lg {
-  box-shadow: var(--shadow-lg);
-}
-
-.modal--shadow-xl {
-  box-shadow: var(--shadow-xl);
-}
-
-// Header
-.modal-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-4);
-  border-bottom: 1px solid var(--border-light);
-  flex-shrink: 0;
-}
-
-.modal-title {
-  flex: 1;
-  min-width: 0;
-}
-
-.modal-title-text {
-  font-size: var(--text-xl);
-  font-weight: var(--font-semibold);
-  color: var(--text-primary);
-  margin: 0;
-  line-height: var(--leading-tight);
-  @include text-truncate;
-}
-
-.modal-subtitle {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  margin-top: var(--space-2);
-}
-
-.modal-close {
-  flex-shrink: 0;
-  margin: calc(var(--space-1) * -1);
-}
-
-// Content
-.modal-content {
-  flex: 1;
-  overflow-y: auto;
-  @include scrollbar(6px, transparent, var(--border-light));
-}
-
-// Footer
-.modal-footer {
-  border-top: 1px solid var(--border-light);
-  flex-shrink: 0;
+.button__loading {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-3);
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.button__spinner {
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: currentColor;
+  border-radius: var(--radius-full);
+  animation: spin 0.8s linear infinite;
+}
+
+.button__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  text-align: center;
+}
+
+.button__icon-left,
+.button__icon-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 // Animations
-@keyframes overlay-fade-in {
-  from {
-    opacity: 0;
-  }
+@keyframes spin {
   to {
-    opacity: 1;
-  }
-}
-
-@keyframes modal-slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-// Transition
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity var(--duration-300) var(--ease-out);
-
-  .modal-overlay {
-    transition: opacity var(--duration-300) var(--ease-out);
-  }
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-
-  .modal-overlay {
-    opacity: 0;
-  }
-}
-
-// Responsive
-@include breakpoint(sm) {
-  .modal-overlay {
-    padding: var(--space-8);
-  }
-
-  .modal-title-text {
-    font-size: var(--text-2xl);
+    transform: rotate(360deg);
   }
 }
 </style>

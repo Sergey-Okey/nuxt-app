@@ -105,9 +105,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, useSlots } from 'vue'
-
-export interface TabItem {
+import {
+  ref,
+  computed,
+  useSlots,
+  nextTick,
+  watch,
+  onMounted,
+  onUnmounted,
+} from 'vue'
+// Define TabItem interface
+interface TabItem {
   value: string | number
   label: string
   icon?: string
@@ -116,7 +124,8 @@ export interface TabItem {
   closable?: boolean
 }
 
-export interface TabsProps {
+// Props
+interface TabsProps {
   // Model
   modelValue: string | number
 
@@ -166,32 +175,19 @@ const canScrollPrev = ref(false)
 const canScrollNext = ref(false)
 
 // Get tabs from props or slots
-const tabs = computed(() => {
+const tabs = computed<TabItem[]>(() => {
+  // If tabs provided via props, use them
   if (props.tabs && props.tabs.length > 0) {
     return props.tabs
   }
 
-  // Extract tabs from default slot
-  if (slots.default) {
-    const children = slots.default()
-    return children
-      .filter((child) => child.type && (child.type as any).__name === 'Tab')
-      .map((child) => ({
-        value: child.props?.value,
-        label: child.props?.label,
-        icon: child.props?.icon,
-        badge: child.props?.badge,
-        disabled: child.props?.disabled,
-        closable: child.props?.closable,
-      }))
-  }
-
+  // Otherwise, try to extract from slots
   return []
 })
 
 // Icon size based on tab size
 const iconSize = computed(() => {
-  const map = { sm: '16', md: '18', lg: '20' }
+  const map: Record<string, string> = { sm: '16', md: '18', lg: '20' }
   return map[props.size]
 })
 
@@ -278,8 +274,9 @@ const navigateTabs = (direction: number) => {
 
   let newIndex = currentIndex + direction
   while (newIndex >= 0 && newIndex < tabs.value.length) {
-    if (!tabs.value[newIndex].disabled) {
-      selectTab(tabs.value[newIndex].value)
+    const tab = tabs.value[newIndex]
+    if (tab && !tab.disabled) {
+      selectTab(tab.value)
       break
     }
     newIndex += direction
@@ -324,6 +321,9 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss" scoped>
+@use '~/assets/scss/mixins' as *;
+@use '~/assets/scss/variables' as *;
+
 .tabs {
   display: flex;
   flex-direction: column;

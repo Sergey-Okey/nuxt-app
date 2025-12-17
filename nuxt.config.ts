@@ -9,7 +9,14 @@ export default defineNuxtConfig({
     '@nuxt/icon',
     '@nuxt/image',
   ],
+  imports: {
+    autoImport: true,
+  },
 
+  typescript: {
+    strict: true,
+    typeCheck: true,
+  },
   css: ['~/assets/scss/main.scss'],
   googleFonts: {
     families: {
@@ -39,8 +46,6 @@ export default defineNuxtConfig({
       path: '~/components',
       pathPrefix: false,
       extensions: ['.vue'],
-      prefix: '',
-      pattern: ['**/*.vue'],
     },
     {
       path: '~/components/ui',

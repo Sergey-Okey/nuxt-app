@@ -3,15 +3,15 @@
     <!-- Label -->
     <label v-if="label" :for="id" :class="labelClasses">
       {{ label }}
-      <span v-if="required" class="input__required">*</span>
+      <span v-if="reqred" class="input__reqred">*</span>
     </label>
 
     <!-- Input container -->
     <div :class="containerClasses">
       <!-- Left slot -->
-      <div v-if="$slots.left || iconLeft" class="input__left">
+      <div v-if="slots.left || iconLeft" class="input__left">
         <slot name="left">
-          <UiIcon v-if="iconLeft" :name="iconLeft" :size="iconSize" />
+          <Icon v-if="iconLeft" :name="iconLeft" :size="iconSize" />
         </slot>
       </div>
 
@@ -26,7 +26,7 @@
         :placeholder="placeholder"
         :disabled="disabled"
         :readonly="readonly"
-        :required="required"
+        :reqred="reqred"
         :autocomplete="autocomplete"
         :maxlength="maxlength"
         :rows="rows"
@@ -39,10 +39,10 @@
       />
 
       <!-- Right slot (clear button, icon, etc.) -->
-      <div v-if="showClear || $slots.right || iconRight" class="input__right">
+      <div v-if="showClear || slots.right || iconRight" class="input__right">
         <slot name="right">
           <!-- Clear button -->
-          <UiButton
+          <Button
             v-if="showClear && modelValue && !disabled"
             variant="text"
             size="xs"
@@ -50,17 +50,17 @@
             @click="handleClear"
             class="input__clear"
           >
-            <UiIcon name="close" size="16" />
-          </UiButton>
+            <Icon name="close" size="16" />
+          </Button>
 
           <!-- Right icon -->
-          <UiIcon v-else-if="iconRight" :name="iconRight" :size="iconSize" />
+          <Icon v-else-if="iconRight" :name="iconRight" :size="iconSize" />
         </slot>
       </div>
     </div>
 
     <!-- Helper text -->
-    <div v-if="helperText || $slots.helper" class="input__helper">
+    <div v-if="helperText || slots.helper" class="input__helper">
       <slot name="helper">
         {{ helperText }}
       </slot>
@@ -68,16 +68,15 @@
 
     <!-- Error message -->
     <div v-if="error" class="input__error">
-      <UiIcon name="alert" size="16" class="input__error-icon" />
+      <Icon name="alert" size="16" class="input__error-icon" />
       <span>{{ error }}</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
-import UiButton from './Button.vue'
-import UiIcon from './Icon.vue'
+import { ref, computed, useSlots, nextTick } from 'vue'
+const slots = useSlots()
 
 export interface InputProps {
   // Basic
@@ -88,7 +87,7 @@ export interface InputProps {
   id?: string
 
   // Validation
-  required?: boolean
+  reqred?: boolean
   disabled?: boolean
   readonly?: boolean
   error?: string
@@ -153,16 +152,15 @@ const wrapperClasses = computed(() => [
     'input--error': props.error,
     'input--full-width': props.fullWidth,
     'input--focused': isFocused.value,
-    'input--has-left': props.iconLeft || props.$slots.left,
-    'input--has-right':
-      props.iconRight || props.$slots.right || showClear.value,
+    'input--has-left': props.iconLeft || slots.left,
+    'input--has-right': props.iconRight || slots.right || showClear.value,
   },
 ])
 
 const labelClasses = computed(() => [
   'input__label',
   {
-    'input__label--required': props.required,
+    'input__label--reqred': props.reqred,
   },
 ])
 
@@ -230,192 +228,3 @@ defineExpose({
   select: () => inputRef.value?.select(),
 })
 </script>
-
-<style lang="scss" scoped>
-.input {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  text-align: left;
-
-  &--full-width {
-    width: 100%;
-  }
-
-  &--disabled {
-    opacity: var(--opacity-50);
-    cursor: not-allowed;
-  }
-
-  &--error {
-    .input__container {
-      border-color: var(--error);
-
-      &--focused {
-        border-color: var(--error);
-        box-shadow: 0 0 0 1px var(--error);
-      }
-    }
-
-    .input__label {
-      color: var(--error);
-    }
-  }
-}
-
-.input__label {
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-
-  &--required {
-    &::after {
-      content: '*';
-      color: var(--error);
-    }
-  }
-}
-
-.input__container {
-  display: flex;
-  align-items: center;
-  background: var(--surface-bg);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-base);
-  transition: all var(--duration-200) var(--ease-in-out);
-  position: relative;
-
-  &--rounded {
-    border-radius: var(--radius-full);
-  }
-
-  &--transparent {
-    background: transparent;
-  }
-
-  &--focused {
-    border-color: var(--border-hover);
-    box-shadow: var(--shadow-sm);
-  }
-
-  &--error {
-    border-color: var(--error);
-  }
-
-  &--disabled {
-    opacity: var(--opacity-50);
-    cursor: not-allowed;
-  }
-}
-
-.input__left,
-.input__right {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--text-secondary);
-}
-
-.input__left {
-  padding-left: var(--space-4);
-}
-
-.input__right {
-  padding-right: var(--space-4);
-}
-
-.input__field {
-  flex: 1;
-  width: 100%;
-  background: transparent;
-  border: none;
-  padding: 0 var(--space-4);
-  color: var(--text-primary);
-  font-family: var(--font-family-primary);
-  font-size: inherit;
-  line-height: var(--leading-normal);
-  resize: none;
-  outline: none;
-  min-height: 44px; // Touch target
-
-  &::placeholder {
-    color: var(--text-muted);
-    opacity: 1;
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-  }
-
-  &--textarea {
-    padding: var(--space-3) var(--space-4);
-    min-height: auto;
-    line-height: var(--leading-relaxed);
-  }
-}
-
-.input__clear {
-  opacity: 0.5;
-  transition: opacity var(--duration-200) var(--ease-in-out);
-
-  &:hover {
-    opacity: 1;
-  }
-}
-
-.input__helper {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  margin-top: var(--space-1);
-}
-
-.input__error {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-xs);
-  color: var(--error);
-  margin-top: var(--space-1);
-}
-
-.input__error-icon {
-  flex-shrink: 0;
-}
-
-// Size variants
-.input--sm {
-  .input__field {
-    font-size: var(--text-sm);
-    min-height: 36px;
-    padding: 0 var(--space-3);
-  }
-
-  .input__left {
-    padding-left: var(--space-3);
-  }
-
-  .input__right {
-    padding-right: var(--space-3);
-  }
-}
-
-.input--lg {
-  .input__field {
-    font-size: var(--text-lg);
-    min-height: 52px;
-    padding: 0 var(--space-5);
-  }
-
-  .input__left {
-    padding-left: var(--space-5);
-  }
-
-  .input__right {
-    padding-right: var(--space-5);
-  }
-}
-</style>

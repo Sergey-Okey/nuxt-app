@@ -95,7 +95,7 @@
                 label="Textarea"
                 is-textarea
                 placeholder="Multi-line text..."
-                rows="3"
+                :rows="3"
               />
             </div>
           </div>
@@ -165,49 +165,7 @@
         </div>
       </section>
 
-      <!-- 5. Select Section -->
-      <section class="test-section">
-        <h2 class="test-section-title">Select</h2>
-        <div class="test-grid">
-          <div class="test-card">
-            <h3>Single Select</h3>
-            <Select
-              label="Choose category"
-              v-model="selectedCategory"
-              :options="categoryOptions"
-              placeholder="Select a category..."
-            />
-            <p class="test-note">Selected: {{ selectedCategory || 'None' }}</p>
-          </div>
-
-          <div class="test-card">
-            <h3>Multiple Select</h3>
-            <Select
-              label="Choose tags"
-              v-model="selectedTags"
-              :options="tagOptions"
-              multiple
-              placeholder="Select multiple tags..."
-            />
-            <p class="test-note">
-              Selected: {{ selectedTags.join(', ') || 'None' }}
-            </p>
-          </div>
-
-          <div class="test-card">
-            <h3>Searchable Select</h3>
-            <Select
-              label="Search tasks"
-              v-model="selectedTask"
-              :options="taskOptions"
-              searchable
-              placeholder="Search and select..."
-            />
-          </div>
-        </div>
-      </section>
-
-      <!-- 6. Progress Section -->
+      <!-- 5. Progress Section -->
       <section class="test-section">
         <h2 class="test-section-title">Progress</h2>
         <div class="test-grid">
@@ -241,7 +199,7 @@
         </div>
       </section>
 
-      <!-- 7. Badges Section -->
+      <!-- 6. Badges Section -->
       <section class="test-section">
         <h2 class="test-section-title">Badges</h2>
         <div class="test-grid">
@@ -281,29 +239,7 @@
         </div>
       </section>
 
-      <!-- 8. Tabs Section -->
-      <section class="test-section">
-        <h2 class="test-section-title">Tabs</h2>
-        <div class="test-card">
-          <Tabs v-model="activeTab" :tabs="tabs" />
-          <div class="tab-content">
-            <div v-if="activeTab === 'tasks'">
-              <h3>Tasks Content</h3>
-              <p>This is the tasks tab content.</p>
-            </div>
-            <div v-if="activeTab === 'timer'">
-              <h3>Timer Content</h3>
-              <p>This is the timer tab content.</p>
-            </div>
-            <div v-if="activeTab === 'stats'">
-              <h3>Statistics Content</h3>
-              <p>This is the statistics tab content.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 9. Modal Test Button -->
+      <!-- 7. Modal Test Button -->
       <section class="test-section">
         <h2 class="test-section-title">Modal</h2>
         <div class="test-card">
@@ -341,39 +277,8 @@ import { ref } from 'vue'
 
 // Test data for components
 const inputValue = ref('')
-const selectedCategory = ref('')
-const selectedTags = ref<string[]>([])
-const selectedTask = ref('')
-const activeTab = ref('tasks')
 const showModal = ref(false)
 const checkedValues = ref<string[]>([])
-
-const categoryOptions = [
-  { value: 'work', label: 'Work', icon: 'briefcase' },
-  { value: 'personal', label: 'Personal', icon: 'user' },
-  { value: 'health', label: 'Health', icon: 'heart' },
-  { value: 'learning', label: 'Learning', icon: 'book' },
-]
-
-const tagOptions = [
-  { value: 'urgent', label: 'Urgent' },
-  { value: 'important', label: 'Important' },
-  { value: 'low-priority', label: 'Low Priority' },
-  { value: 'backlog', label: 'Backlog' },
-]
-
-const taskOptions = [
-  { value: 'task-1', label: 'Design system implementation' },
-  { value: 'task-2', label: 'API integration' },
-  { value: 'task-3', label: 'User testing' },
-  { value: 'task-4', label: 'Documentation' },
-]
-
-const tabs = [
-  { value: 'tasks', label: 'Tasks', icon: 'list', badge: '3' },
-  { value: 'timer', label: 'Timer', icon: 'clock' },
-  { value: 'stats', label: 'Statistics', icon: 'chart' },
-]
 
 const checkboxOptions = [
   { value: 'option-1', label: 'Option 1' },
@@ -480,23 +385,6 @@ const handleCardClick = () => {
   margin-top: var(--space-2);
   padding-top: var(--space-2);
   border-top: 1px solid var(--border-light);
-}
-
-.tab-content {
-  padding: var(--space-6);
-  background: var(--surface-bg);
-  border-radius: 0 0 var(--radius-base) var(--radius-base);
-  border: 1px solid var(--border-light);
-  border-top: none;
-
-  h3 {
-    margin-top: 0;
-    color: var(--text-primary);
-  }
-
-  p {
-    color: var(--text-secondary);
-  }
 }
 
 // Responsive adjustments

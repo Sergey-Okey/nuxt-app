@@ -26,8 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-
+import { ref, computed } from 'vue'
 export interface BadgeProps {
   // Content
   label?: string | number

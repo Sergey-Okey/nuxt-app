@@ -3,7 +3,7 @@
     <!-- Label -->
     <label v-if="label" :for="id" class="select__label">
       {{ label }}
-      <span v-if="required" class="select__required">*</span>
+      <span v-if="reqred" class="select__reqred">*</span>
     </label>
 
     <!-- Select container -->
@@ -18,25 +18,25 @@
       <div class="select__selected">
         <!-- Left icon -->
         <div v-if="icon" class="select__icon">
-          <UiIcon :name="icon" size="18" />
+          <Icon :name="icon" size="18" />
         </div>
 
         <!-- Placeholder or selected value -->
-        <span v-if="!selectedOption" class="select__placeholder">
+        <span v-if="!selectedOptionLabel" class="select__placeholder">
           {{ placeholder || 'Select...' }}
         </span>
 
         <!-- Selected option -->
         <span v-else class="select__value">
           <slot name="selected" :option="selectedOption">
-            {{ getOptionLabel(selectedOption) }}
+            {{ selectedOptionLabel }}
           </slot>
         </span>
       </div>
 
       <!-- Dropdown indicator -->
       <div class="select__indicator">
-        <UiIcon :name="isOpen ? 'chevron-up' : 'chevron-down'" size="18" />
+        <Icon :name="isOpen ? 'chevron-up' : 'chevron-down'" size="18" />
       </div>
     </div>
 
@@ -50,7 +50,7 @@
       >
         <!-- Search input -->
         <div v-if="searchable" class="select__search">
-          <UiInput
+          <Input
             v-model="searchQuery"
             placeholder="Search..."
             size="sm"
@@ -73,7 +73,7 @@
               <div class="select__option-content">
                 <!-- Option icon -->
                 <div v-if="option.icon" class="select__option-icon">
-                  <UiIcon :name="option.icon" size="16" />
+                  <Icon :name="option.icon" size="16" />
                 </div>
 
                 <!-- Option label -->
@@ -86,7 +86,7 @@
                   v-if="isOptionSelected(option)"
                   class="select__option-check"
                 >
-                  <UiIcon name="check" size="16" />
+                  <Icon name="check" size="16" />
                 </div>
               </div>
 
@@ -112,15 +112,14 @@
 
     <!-- Error message -->
     <div v-if="error" class="select__error">
-      <UiIcon name="alert" size="16" />
+      <Icon name="alert" size="16" />
       {{ error }}
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-
+import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue'
 export interface SelectOption {
   value: string | number
   label: string
@@ -142,7 +141,7 @@ export interface SelectProps {
   label?: string
   helperText?: string
   error?: string
-  required?: boolean
+  reqred?: boolean
   disabled?: boolean
 
   // Styling
@@ -186,11 +185,17 @@ const id = `select-${Math.random().toString(36).substr(2, 9)}`
 // Computed
 const selectedOption = computed(() => {
   if (props.multiple) {
-    return props.options.filter((option) =>
-      (props.modelValue as (string | number)[])?.includes(option.value)
-    )
+    const values = Array.isArray(props.modelValue) ? props.modelValue : []
+    return props.options.filter((option) => values.includes(option.value))
   }
   return props.options.find((option) => option.value === props.modelValue)
+})
+
+const selectedOptionLabel = computed(() => {
+  if (Array.isArray(selectedOption.value)) {
+    return selectedOption.value.map((opt) => opt.label).join(', ')
+  }
+  return selectedOption.value?.label || ''
 })
 
 const filteredOptions = computed(() => {
@@ -258,14 +263,14 @@ const dropdownStyles = computed(() => {
 })
 
 // Methods
-const getOptionLabel = (option: SelectOption) =>
-  option[props.optionLabel as keyof SelectOption] as string
+const getOptionLabel = (option: SelectOption) => option.label
 const getOptionKey = (option: SelectOption, index: number) =>
-  (option[props.trackBy as keyof SelectOption] as string) || index
+  option.value.toString() || index.toString()
 
 const isOptionSelected = (option: SelectOption) => {
   if (props.multiple) {
-    return (props.modelValue as (string | number)[])?.includes(option.value)
+    const values = Array.isArray(props.modelValue) ? props.modelValue : []
+    return values.includes(option.value)
   }
   return props.modelValue === option.value
 }
@@ -301,7 +306,7 @@ const selectOption = (option: SelectOption) => {
   if (option.disabled) return
 
   if (props.multiple) {
-    const currentValue = (props.modelValue as (string | number)[]) || []
+    const currentValue = Array.isArray(props.modelValue) ? props.modelValue : []
     const newValue = currentValue.includes(option.value)
       ? currentValue.filter((v) => v !== option.value)
       : [...currentValue, option.value]
@@ -360,9 +365,12 @@ const navigateOptions = (direction: number) => {
   if (newIndex < 0) newIndex = options.length - 1
   if (newIndex >= options.length) newIndex = 0
 
-  hoveredIndex.value = filteredOptions.value.findIndex(
-    (option) => option.value === options[newIndex].value
-  )
+  const selectedOption = options[newIndex]
+  if (selectedOption) {
+    hoveredIndex.value = filteredOptions.value.findIndex(
+      (option) => option.value === selectedOption.value
+    )
+  }
 
   // Scroll to hovered option
   nextTick(() => {
@@ -378,7 +386,10 @@ const selectFirstOption = () => {
     hoveredIndex.value >= 0 &&
     hoveredIndex.value < filteredOptions.value.length
   ) {
-    selectOption(filteredOptions.value[hoveredIndex.value])
+    const option = filteredOptions.value[hoveredIndex.value]
+    if (option) {
+      selectOption(option)
+    }
   }
 }
 
@@ -410,264 +421,3 @@ const blur = () => containerRef.value?.blur()
 
 defineExpose({ focus, blur, open: () => toggleDropdown() })
 </script>
-
-<style lang="scss" scoped>
-.select {
-  position: relative;
-  display: inline-flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  text-align: left;
-
-  &--full-width {
-    width: 100%;
-  }
-
-  &--disabled {
-    opacity: var(--opacity-50);
-    cursor: not-allowed;
-
-    .select__container {
-      cursor: not-allowed;
-    }
-  }
-
-  &--error {
-    .select__container {
-      border-color: var(--error);
-
-      &--open {
-        border-color: var(--error);
-      }
-    }
-  }
-}
-
-.select__label {
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.select__required {
-  color: var(--error);
-}
-
-.select__container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--surface-bg);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-base);
-  padding: var(--space-3) var(--space-4);
-  cursor: pointer;
-  transition: all var(--duration-200) var(--ease-in-out);
-  min-height: 44px;
-  gap: var(--space-3);
-  outline: none;
-
-  &--rounded {
-    border-radius: var(--radius-full);
-  }
-
-  &--open {
-    border-color: var(--border-hover);
-    box-shadow: var(--shadow-sm);
-  }
-
-  &--error {
-    border-color: var(--error);
-  }
-
-  &--disabled {
-    opacity: var(--opacity-50);
-    cursor: not-allowed;
-  }
-
-  &:focus-visible {
-    @include focus-ring;
-  }
-}
-
-.select__selected {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-width: 0;
-}
-
-.select__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-  flex-shrink: 0;
-}
-
-.select__placeholder {
-  color: var(--text-muted);
-  @include text-truncate;
-}
-
-.select__value {
-  color: var(--text-primary);
-  @include text-truncate;
-}
-
-.select__indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-  transition: transform var(--duration-200) var(--ease-in-out);
-  flex-shrink: 0;
-
-  .select--open & {
-    transform: rotate(180deg);
-  }
-}
-
-.select__dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: var(--surface-bg);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-base);
-  box-shadow: var(--shadow-lg);
-  z-index: var(--z-dropdown);
-  margin-top: var(--space-2);
-  overflow: hidden;
-  max-height: 300px;
-  display: flex;
-  flex-direction: column;
-}
-
-.select__search {
-  padding: var(--space-3);
-  border-bottom: 1px solid var(--border-light);
-}
-
-.select__options {
-  overflow-y: auto;
-  padding: var(--space-1);
-  max-height: 250px;
-}
-
-.select__option {
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--duration-150) var(--ease-in-out);
-
-  &:hover:not(&--disabled) {
-    background: var(--hover-bg);
-  }
-
-  &--selected {
-    background: var(--selected-bg);
-  }
-
-  &--hovered:not(&--disabled) {
-    background: var(--hover-bg);
-  }
-
-  &--disabled {
-    opacity: var(--opacity-50);
-    cursor: not-allowed;
-  }
-}
-
-.select__option-content {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.select__option-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-  flex-shrink: 0;
-}
-
-.select__option-label {
-  flex: 1;
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  @include text-truncate;
-}
-
-.select__option-check {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-primary);
-  flex-shrink: 0;
-}
-
-.select__option-description {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  margin-top: var(--space-1);
-  line-height: var(--leading-normal);
-}
-
-.select__no-results {
-  padding: var(--space-4);
-  text-align: center;
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-}
-
-.select__helper {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  margin-top: var(--space-1);
-}
-
-.select__error {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-xs);
-  color: var(--error);
-  margin-top: var(--space-1);
-}
-
-// Transition animations
-.select-dropdown-enter-active,
-.select-dropdown-leave-active {
-  transition: all var(--duration-200) var(--ease-out);
-}
-
-.select-dropdown-enter-from,
-.select-dropdown-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
-}
-
-// Size variants
-.select--sm {
-  .select__container {
-    min-height: 36px;
-    padding: var(--space-2) var(--space-3);
-    font-size: var(--text-sm);
-  }
-}
-
-.select--lg {
-  .select__container {
-    min-height: 52px;
-    padding: var(--space-4) var(--space-5);
-    font-size: var(--text-lg);
-  }
-}
-</style>

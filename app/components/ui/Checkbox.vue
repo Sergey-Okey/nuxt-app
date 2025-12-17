@@ -7,7 +7,7 @@
       type="checkbox"
       :class="inputClasses"
       :disabled="disabled"
-      :required="required"
+      :reqred="reqred"
       :name="name"
       :value="value"
       @change="handleChange"
@@ -18,12 +18,12 @@
     <!-- Custom checkbox -->
     <span :class="checkboxClasses">
       <span class="checkbox__indicator">
-        <UiIcon v-if="isChecked" name="check" size="14" />
+        <Icon v-if="isChecked" name="check" size="14" />
         <span v-else-if="indeterminate" class="checkbox__indeterminate" />
       </span>
 
       <!-- Label -->
-      <span v-if="$slots.default || label" class="checkbox__label">
+      <span v-if="slots.default || label" class="checkbox__label">
         <slot>{{ label }}</slot>
       </span>
     </span>
@@ -31,9 +31,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, useSlots } from 'vue'
+const slots = useSlots()
 
-export interface CheckboxProps {
+// Интерфейс для пропсов
+interface CheckboxProps {
   // Model
   modelValue?: boolean | (string | number)[]
   value?: string | number | boolean
@@ -41,7 +43,7 @@ export interface CheckboxProps {
   // States
   disabled?: boolean
   readonly?: boolean
-  required?: boolean
+  reqred?: boolean
   indeterminate?: boolean
 
   // Label
@@ -61,11 +63,12 @@ const props = withDefaults(defineProps<CheckboxProps>(), {
   border: true,
 })
 
+// Правильное объявление emits с кортежами
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean | (string | number)[]]
-  change: [value: boolean | (string | number)[]]
-  focus: [event: FocusEvent]
-  blur: [event: FocusEvent]
+  (e: 'update:modelValue', value: boolean | (string | number)[]): void
+  (e: 'change', value: boolean | (string | number)[]): void
+  (e: 'focus', event: FocusEvent): void
+  (e: 'blur', event: FocusEvent): void
 }>()
 
 const inputRef = ref<HTMLInputElement>()
@@ -82,14 +85,14 @@ const isChecked = computed(() => {
 // Internal value for v-model
 const internalValue = computed({
   get: () => props.modelValue,
-  set: (value) => {
+  set: (value: boolean | (string | number)[]) => {
     emit('update:modelValue', value)
     emit('change', value)
   },
 })
 
 // Size mapping
-const sizeClasses = {
+const sizeClasses: Record<string, string> = {
   sm: 'checkbox--sm',
   md: 'checkbox--md',
   lg: 'checkbox--lg',
@@ -136,7 +139,7 @@ const checkboxClasses = computed(() => [
 // Methods
 const handleChange = (event: Event) => {
   if (!props.readonly) {
-    emit('change', internalValue.value)
+    emit('change', internalValue.value as boolean | (string | number)[])
   }
 }
 
