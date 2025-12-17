@@ -10,24 +10,26 @@
   --secondary-bg: #{$secondary-bg};
   --card-bg: #{$card-bg};
   --surface-bg: #{$surface-bg};
-  
-  --accent-primary: #{$accent-primary};
-  --accent-secondary: #{$accent-secondary};
-  --accent-warning: #{$accent-warning};
-  --accent-error: #{$accent-error};
+  --overlay-bg: #{$overlay-bg};
   
   --text-primary: #{$text-primary};
   --text-secondary: #{$text-secondary};
   --text-muted: #{$text-muted};
+  --text-inverse: #{$text-inverse};
+  
+  --border-primary: #{$border-primary};
+  --border-secondary: #{$border-secondary};
+  --border-light: #{$border-light};
+  --border-hover: #{$border-hover};
   
   --success: #{$success};
   --warning: #{$warning};
   --error: #{$error};
   --info: #{$info};
   
-  --gradient-primary: #{$gradient-primary};
-  --gradient-card: #{$gradient-card};
-  --gradient-glass: #{$gradient-glass};
+  --hover-bg: #{$hover-bg};
+  --active-bg: #{$active-bg};
+  --selected-bg: #{$selected-bg};
 
   // Typography
   --font-family-primary: #{$font-family-primary};
@@ -41,6 +43,7 @@
   --text-2xl: #{$text-2xl};
   --text-3xl: #{$text-3xl};
   --text-4xl: #{$text-4xl};
+  --text-5xl: #{$text-5xl};
   
   --font-light: #{$font-light};
   --font-normal: #{$font-normal};
@@ -51,29 +54,42 @@
   --leading-tight: #{$leading-tight};
   --leading-normal: #{$leading-normal};
   --leading-relaxed: #{$leading-relaxed};
+  --leading-loose: #{$leading-loose};
+  
+  --tracking-tight: #{$tracking-tight};
+  --tracking-normal: #{$tracking-normal};
+  --tracking-wide: #{$tracking-wide};
 
   // Spacing
+  --space-0: #{$space-0};
   --space-1: #{$space-1};
   --space-2: #{$space-2};
   --space-3: #{$space-3};
   --space-4: #{$space-4};
   --space-5: #{$space-5};
   --space-6: #{$space-6};
+  --space-7: #{$space-7};
   --space-8: #{$space-8};
   --space-10: #{$space-10};
   --space-12: #{$space-12};
   --space-16: #{$space-16};
+  --space-20: #{$space-20};
+  --space-24: #{$space-24};
 
   // Border Radius
+  --radius-none: #{$radius-none};
   --radius-sm: #{$radius-sm};
   --radius-base: #{$radius-base};
+  --radius-md: #{$radius-md};
   --radius-lg: #{$radius-lg};
   --radius-xl: #{$radius-xl};
+  --radius-2xl: #{$radius-2xl};
   --radius-full: #{$radius-full};
   
   --radius-card: #{$radius-card};
   --radius-button: #{$radius-button};
   --radius-input: #{$radius-input};
+  --radius-modal: #{$radius-modal};
   --radius-fab: #{$radius-fab};
 
   // Shadows
@@ -83,42 +99,115 @@
   --shadow-lg: #{$shadow-lg};
   --shadow-xl: #{$shadow-xl};
   
-  --glow-primary: #{$glow-primary};
-  --glow-success: #{$glow-success};
-  --glow-warning: #{$glow-warning};
-  --glow-error: #{$glow-error};
+  --shadow-hover: #{$shadow-hover};
+  --shadow-active: #{$shadow-active};
+  --shadow-inset: #{$shadow-inset};
 
   // Animation
-  --duration-fast: #{$duration-fast};
-  --duration-base: #{$duration-base};
-  --duration-slow: #{$duration-slow};
+  --duration-75: #{$duration-75};
+  --duration-100: #{$duration-100};
+  --duration-150: #{$duration-150};
+  --duration-200: #{$duration-200};
+  --duration-300: #{$duration-300};
+  --duration-500: #{$duration-500};
+  --duration-700: #{$duration-700};
   
+  --ease-linear: #{$ease-linear};
+  --ease-in: #{$ease-in};
   --ease-out: #{$ease-out};
   --ease-in-out: #{$ease-in-out};
   --ease-bounce: #{$ease-bounce};
+  --ease-spring: #{$ease-spring};
+
+  // Breakpoints (как медиа-переменные)
+  --breakpoint-xs: #{$breakpoint-xs};
+  --breakpoint-sm: #{$breakpoint-sm};
+  --breakpoint-md: #{$breakpoint-md};
+  --breakpoint-lg: #{$breakpoint-lg};
+  --breakpoint-xl: #{$breakpoint-xl};
+  --breakpoint-2xl: #{$breakpoint-2xl};
+  --breakpoint-3xl: #{$breakpoint-3xl};
+  --breakpoint-4xl: #{$breakpoint-4xl};
+  --breakpoint-5xl: #{$breakpoint-5xl};
+  --breakpoint-6xl: #{$breakpoint-6xl};
 
   // Z-index
+  --z-index-0: #{$z-index-0};
+  --z-index-10: #{$z-index-10};
+  --z-index-20: #{$z-index-20};
+  --z-index-30: #{$z-index-30};
+  --z-index-40: #{$z-index-40};
+  --z-index-50: #{$z-index-50};
+  --z-index-auto: #{$z-index-auto};
+  
   --z-dropdown: #{$z-dropdown};
   --z-sticky: #{$z-sticky};
   --z-fixed: #{$z-fixed};
+  --z-modal-backdrop: #{$z-modal-backdrop};
   --z-modal: #{$z-modal};
   --z-popover: #{$z-popover};
   --z-tooltip: #{$z-tooltip};
   --z-toast: #{$z-toast};
+
+  // Layout
+  --header-height: #{$header-height};
+  --footer-height: #{$footer-height};
+  --sidebar-width: #{$sidebar-width};
+  
+  --max-width-xs: #{$max-width-xs};
+  --max-width-sm: #{$max-width-sm};
+  --max-width-md: #{$max-width-md};
+  --max-width-lg: #{$max-width-lg};
+  --max-width-xl: #{$max-width-xl};
+  --max-width-2xl: #{$max-width-2xl};
+  --max-width-3xl: #{$max-width-3xl};
+  --max-width-4xl: #{$max-width-4xl};
+  --max-width-5xl: #{$max-width-5xl};
+  --max-width-6xl: #{$max-width-6xl};
+  --max-width-7xl: #{$max-width-7xl};
+
+  // Other
+  --opacity-0: #{$opacity-0};
+  --opacity-25: #{$opacity-25};
+  --opacity-50: #{$opacity-50};
+  --opacity-75: #{$opacity-75};
+  --opacity-100: #{$opacity-100};
+  
+  --blur-sm: #{$blur-sm};
+  --blur-base: #{$blur-base};
+  --blur-md: #{$blur-md};
+  --blur-lg: #{$blur-lg};
+  --blur-xl: #{$blur-xl};
 }
 
-// Light theme variations
+// Light theme вариант
 [data-theme="light"] {
   --primary-bg: #ffffff;
-  --secondary-bg: #f8fafc;
+  --secondary-bg: #f5f5f5;
   --card-bg: #ffffff;
-  --surface-bg: #f1f5f9;
+  --surface-bg: #f0f0f0;
+  --overlay-bg: rgba(255, 255, 255, 0.7);
   
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
+  --text-primary: #1a1a1a;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --text-inverse: #ffffff;
   
-  --shadow-base: 0 4px 20px rgba(0, 0, 0, 0.1);
-  --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.15);
-  --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.2);
+  --border-primary: #e0e0e0;
+  --border-secondary: #d0d0d0;
+  --border-light: rgba(0, 0, 0, 0.08);
+  --border-hover: rgba(0, 0, 0, 0.12);
+  
+  --hover-bg: rgba(0, 0, 0, 0.05);
+  --active-bg: rgba(0, 0, 0, 0.08);
+  --selected-bg: rgba(0, 0, 0, 0.1);
+  
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-base: 0 2px 4px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.12);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.04), 0 4px 8px rgba(0, 0, 0, 0.06);
+  --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.03), 0 6px 12px rgba(0, 0, 0, 0.04);
+  
+  --shadow-hover: 0 6px 12px rgba(0, 0, 0, 0.08), 0 3px 6px rgba(0, 0, 0, 0.12);
+  --shadow-active: 0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.16);
 }
