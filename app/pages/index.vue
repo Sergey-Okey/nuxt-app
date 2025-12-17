@@ -1,144 +1,521 @@
-<!-- pages/index.vue -->
 <template>
-  <div class="container py-8">
-    <div class="space-y-8">
-      <h1 class="text-3xl font-semibold mb-6">UI Components Test</h1>
+  <div class="test-page">
+    <!-- Header -->
+    <header class="test-header">
+      <h1 class="test-title">Components Test</h1>
+      <p class="test-subtitle">Task Manager Design System</p>
+    </header>
 
-      <!-- Тест кнопок -->
-      <div class="space-y-6">
-        <h2 class="text-xl font-medium">Buttons</h2>
+    <div class="test-container">
+      <!-- 1. Buttons Section -->
+      <section class="test-section">
+        <h2 class="test-section-title">Buttons</h2>
+        <div class="test-grid">
+          <!-- Button variants -->
+          <div class="test-card">
+            <h3>Variants</h3>
+            <div class="test-row">
+              <Button variant="primary" label="Primary" />
+              <Button variant="secondary" label="Secondary" />
+              <Button variant="ghost" label="Ghost" />
+              <Button variant="text" label="Text" />
+              <Button variant="danger" label="Danger" />
+            </div>
+          </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <!-- Primary -->
-          <Button @click="handleButtonClick"> Primary </Button>
+          <!-- Button sizes -->
+          <div class="test-card">
+            <h3>Sizes</h3>
+            <div class="test-row">
+              <Button size="xs" label="Extra Small" />
+              <Button size="sm" label="Small" />
+              <Button size="md" label="Medium" />
+              <Button size="lg" label="Large" />
+              <Button size="xl" label="Extra Large" />
+            </div>
+          </div>
 
-          <Button type="secondary" @click="handleButtonClick">
-            Secondary
-          </Button>
+          <!-- Button states -->
+          <div class="test-card">
+            <h3>States</h3>
+            <div class="test-row">
+              <Button label="Normal" />
+              <Button label="Disabled" disabled />
+              <Button label="Loading" loading />
+              <Button label="Full Width" full-width />
+            </div>
+          </div>
 
-          <Button type="ghost" @click="handleButtonClick"> Ghost </Button>
-
-          <Button type="text" @click="handleButtonClick"> Text </Button>
+          <!-- Button with icons -->
+          <div class="test-card">
+            <h3>With Icons</h3>
+            <div class="test-row">
+              <Button icon-left="plus" label="Add" />
+              <Button icon-right="arrow-right" label="Continue" />
+              <Button icon-left="trash" variant="danger" label="Delete" />
+              <Button icon="settings" icon-only />
+              <Button icon="bell" circle />
+            </div>
+          </div>
         </div>
+      </section>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <!-- Sizes -->
-          <Button size="xs" @click="handleButtonClick"> XS </Button>
+      <!-- 2. Inputs Section -->
+      <section class="test-section">
+        <h2 class="test-section-title">Inputs</h2>
+        <div class="test-grid">
+          <!-- Basic inputs -->
+          <div class="test-card">
+            <h3>Basic Inputs</h3>
+            <div class="test-column">
+              <Input label="Text Input" placeholder="Enter text..." />
+              <Input
+                label="With Icon"
+                icon-left="search"
+                placeholder="Search..."
+              />
+              <Input label="Disabled" value="Disabled field" disabled />
+              <Input label="Error State" error="This field is reqred" />
+            </div>
+          </div>
 
-          <Button size="sm" @click="handleButtonClick"> SM </Button>
-
-          <Button size="md" @click="handleButtonClick"> MD </Button>
-
-          <Button size="lg" @click="handleButtonClick"> LG </Button>
+          <!-- Input variations -->
+          <div class="test-card">
+            <h3>Variations</h3>
+            <div class="test-column">
+              <Input size="sm" label="Small" placeholder="Small input" />
+              <Input size="lg" label="Large" placeholder="Large input" />
+              <Input
+                label="Clearable"
+                clearable
+                placeholder="Type to clear"
+                v-model="inputValue"
+              />
+              <Input
+                label="Textarea"
+                is-textarea
+                placeholder="Multi-line text..."
+                rows="3"
+              />
+            </div>
+          </div>
         </div>
+      </section>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <!-- States -->
-          <Button :loading="isLoading" @click="toggleLoading">
-            {{ isLoading ? 'Loading...' : 'Click to Load' }}
-          </Button>
+      <!-- 3. Cards Section -->
+      <section class="test-section">
+        <h2 class="test-section-title">Cards</h2>
+        <div class="test-grid">
+          <!-- Card variants -->
+          <Card title="Default Card" class="test-card">
+            <p>This is a default card with some content inside.</p>
+            <template #actions>
+              <Button variant="text" label="Action 1" />
+              <Button variant="primary" label="Action 2" />
+            </template>
+          </Card>
 
-          <Button disabled> Disabled </Button>
+          <Card title="Outline Card" variant="outline" class="test-card">
+            <p>Card with outline variant.</p>
+          </Card>
 
-          <Button icon-left="plus" @click="handleButtonClick">
-            With Icon
-          </Button>
+          <Card title="Flat Card" variant="flat" class="test-card">
+            <p>Card with flat styling.</p>
+          </Card>
 
-          <Button badge="3" @click="handleButtonClick"> With Badge </Button>
+          <Card
+            title="Clickable Card"
+            clickable
+            hoverable
+            class="test-card"
+            @click="handleCardClick"
+          >
+            <p>Clickable card with hover effect.</p>
+          </Card>
         </div>
+      </section>
 
-        <!-- Circle buttons -->
-        <div class="flex flex-wrap gap-4">
+      <!-- 4. Checkboxes Section -->
+      <section class="test-section">
+        <h2 class="test-section-title">Checkboxes</h2>
+        <div class="test-grid">
+          <div class="test-card">
+            <h3>Basic Checkboxes</h3>
+            <div class="test-column">
+              <Checkbox label="Unchecked" />
+              <Checkbox label="Checked" :model-value="true" />
+              <Checkbox label="Disabled" disabled />
+              <Checkbox label="Indeterminate" indeterminate />
+            </div>
+          </div>
+
+          <div class="test-card">
+            <h3>Checkbox Group</h3>
+            <div class="test-column">
+              <Checkbox
+                v-for="option in checkboxOptions"
+                :key="option.value"
+                :label="option.label"
+                v-model="checkedValues"
+                :value="option.value"
+              />
+            </div>
+            <p class="test-note">Selected: {{ checkedValues.join(', ') }}</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. Select Section -->
+      <section class="test-section">
+        <h2 class="test-section-title">Select</h2>
+        <div class="test-grid">
+          <div class="test-card">
+            <h3>Single Select</h3>
+            <Select
+              label="Choose category"
+              v-model="selectedCategory"
+              :options="categoryOptions"
+              placeholder="Select a category..."
+            />
+            <p class="test-note">Selected: {{ selectedCategory || 'None' }}</p>
+          </div>
+
+          <div class="test-card">
+            <h3>Multiple Select</h3>
+            <Select
+              label="Choose tags"
+              v-model="selectedTags"
+              :options="tagOptions"
+              multiple
+              placeholder="Select multiple tags..."
+            />
+            <p class="test-note">
+              Selected: {{ selectedTags.join(', ') || 'None' }}
+            </p>
+          </div>
+
+          <div class="test-card">
+            <h3>Searchable Select</h3>
+            <Select
+              label="Search tasks"
+              v-model="selectedTask"
+              :options="taskOptions"
+              searchable
+              placeholder="Search and select..."
+            />
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. Progress Section -->
+      <section class="test-section">
+        <h2 class="test-section-title">Progress</h2>
+        <div class="test-grid">
+          <div class="test-card">
+            <h3>Linear Progress</h3>
+            <div class="test-column">
+              <Progress :model-value="25" label="Low" />
+              <Progress :model-value="50" label="Medium" variant="warning" />
+              <Progress :model-value="75" label="High" variant="success" />
+              <Progress :model-value="90" label="Critical" variant="error" />
+              <Progress
+                :model-value="45"
+                label="With Buffer"
+                :buffer-value="65"
+                show-buffer
+              />
+              <Progress label="Indeterminate" indeterminate />
+              <Progress :model-value="60" striped animated label="Animated" />
+            </div>
+          </div>
+
+          <div class="test-card">
+            <h3>Circular Progress</h3>
+            <div class="test-row">
+              <Progress :model-value="25" shape="circle" />
+              <Progress :model-value="50" shape="circle" variant="success" />
+              <Progress :model-value="75" shape="circle" variant="warning" />
+              <Progress :model-value="100" shape="circle" variant="error" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. Badges Section -->
+      <section class="test-section">
+        <h2 class="test-section-title">Badges</h2>
+        <div class="test-grid">
+          <div class="test-card">
+            <h3>Badge Variants</h3>
+            <div class="test-row">
+              <Badge label="Default" />
+              <Badge label="Primary" variant="primary" />
+              <Badge label="Success" variant="success" />
+              <Badge label="Warning" variant="warning" />
+              <Badge label="Error" variant="error" />
+              <Badge label="Info" variant="info" />
+            </div>
+          </div>
+
+          <div class="test-card">
+            <h3>Badge Sizes & Shapes</h3>
+            <div class="test-row">
+              <Badge label="XS" size="xs" />
+              <Badge label="SM" size="sm" />
+              <Badge label="MD" size="md" />
+              <Badge label="LG" size="lg" />
+              <Badge label="Pill" shape="pill" />
+              <Badge shape="dot" />
+            </div>
+          </div>
+
+          <div class="test-card">
+            <h3>Badge with Icons</h3>
+            <div class="test-row">
+              <Badge icon="bell" label="Notifications" />
+              <Badge icon="check" label="Completed" variant="success" />
+              <Badge icon="alert" label="Warning" variant="warning" closable />
+              <Badge icon="star" icon-only />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8. Tabs Section -->
+      <section class="test-section">
+        <h2 class="test-section-title">Tabs</h2>
+        <div class="test-card">
+          <Tabs v-model="activeTab" :tabs="tabs" />
+          <div class="tab-content">
+            <div v-if="activeTab === 'tasks'">
+              <h3>Tasks Content</h3>
+              <p>This is the tasks tab content.</p>
+            </div>
+            <div v-if="activeTab === 'timer'">
+              <h3>Timer Content</h3>
+              <p>This is the timer tab content.</p>
+            </div>
+            <div v-if="activeTab === 'stats'">
+              <h3>Statistics Content</h3>
+              <p>This is the statistics tab content.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9. Modal Test Button -->
+      <section class="test-section">
+        <h2 class="test-section-title">Modal</h2>
+        <div class="test-card">
           <Button
-            circle
-            size="md"
-            icon-left="plus"
-            @click="handleButtonClick"
-          />
-          <Button
-            circle
-            size="lg"
-            icon-left="settings"
-            @click="handleButtonClick"
-          />
-          <Button
-            circle
-            size="xl"
-            icon-left="user"
-            @click="handleButtonClick"
+            variant="primary"
+            label="Open Modal"
+            @click="showModal = true"
           />
         </div>
-      </div>
+      </section>
     </div>
+
+    <!-- Modal Component -->
+    <Modal
+      v-model="showModal"
+      title="Test Modal"
+      subtitle="This is a test modal"
+    >
+      <p>This modal demonstrates the modal component functionality.</p>
+      <p>
+        You can add any content here including forms, images, or other
+        components.
+      </p>
+
+      <template #footer>
+        <Button variant="text" label="Cancel" @click="showModal = false" />
+        <Button variant="primary" label="Confirm" @click="showModal = false" />
+      </template>
+    </Modal>
   </div>
 </template>
 
 <script setup lang="ts">
-// Импорты не нужны - Nuxt автоматически импортирует компоненты
+import { ref } from 'vue'
 
-// Состояния
-const isLoading = ref(false)
+// Test data for components
+const inputValue = ref('')
+const selectedCategory = ref('')
+const selectedTags = ref<string[]>([])
+const selectedTask = ref('')
+const activeTab = ref('tasks')
+const showModal = ref(false)
+const checkedValues = ref<string[]>([])
 
-// Методы
-const handleButtonClick = () => {
-  console.log('Button clicked!')
-}
+const categoryOptions = [
+  { value: 'work', label: 'Work', icon: 'briefcase' },
+  { value: 'personal', label: 'Personal', icon: 'user' },
+  { value: 'health', label: 'Health', icon: 'heart' },
+  { value: 'learning', label: 'Learning', icon: 'book' },
+]
 
-const toggleLoading = () => {
-  isLoading.value = true
-  setTimeout(() => {
-    isLoading.value = false
-  }, 2000)
+const tagOptions = [
+  { value: 'urgent', label: 'Urgent' },
+  { value: 'important', label: 'Important' },
+  { value: 'low-priority', label: 'Low Priority' },
+  { value: 'backlog', label: 'Backlog' },
+]
+
+const taskOptions = [
+  { value: 'task-1', label: 'Design system implementation' },
+  { value: 'task-2', label: 'API integration' },
+  { value: 'task-3', label: 'User testing' },
+  { value: 'task-4', label: 'Documentation' },
+]
+
+const tabs = [
+  { value: 'tasks', label: 'Tasks', icon: 'list', badge: '3' },
+  { value: 'timer', label: 'Timer', icon: 'clock' },
+  { value: 'stats', label: 'Statistics', icon: 'chart' },
+]
+
+const checkboxOptions = [
+  { value: 'option-1', label: 'Option 1' },
+  { value: 'option-2', label: 'Option 2' },
+  { value: 'option-3', label: 'Option 3' },
+]
+
+const handleCardClick = () => {
+  console.log('Card clicked!')
 }
 </script>
 
-<style scoped>
-.container {
+<style lang="scss" scoped>
+.test-page {
+  padding: var(--space-6);
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 1rem;
+  background: var(--primary-bg);
+  min-height: 100vh;
 }
 
-.py-8 {
-  padding-top: 2rem;
-  padding-bottom: 2rem;
+.test-header {
+  margin-bottom: var(--space-8);
+  text-align: center;
+  padding: var(--space-8) 0;
+  border-bottom: 1px solid var(--border-light);
 }
 
-.space-y-8 > * + * {
-  margin-top: 2rem;
+.test-title {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
 }
 
-.space-y-6 > * + * {
-  margin-top: 1.5rem;
+.test-subtitle {
+  font-size: var(--text-lg);
+  color: var(--text-secondary);
 }
 
-.mb-6 {
-  margin-bottom: 1.5rem;
+.test-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
 }
 
-.grid {
+.test-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.test-section-title {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.test-grid {
   display: grid;
-}
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-4);
 
-.gap-4 {
-  gap: 1rem;
-}
-
-.grid-cols-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-@media (min-width: 768px) {
-  .md\:grid-cols-4 {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
   }
 }
 
-.flex {
+.test-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-base);
+  padding: var(--space-6);
   display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+    margin: 0;
+  }
 }
 
-.flex-wrap {
+.test-row {
+  display: flex;
   flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.test-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.test-note {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-light);
+}
+
+.tab-content {
+  padding: var(--space-6);
+  background: var(--surface-bg);
+  border-radius: 0 0 var(--radius-base) var(--radius-base);
+  border: 1px solid var(--border-light);
+  border-top: none;
+
+  h3 {
+    margin-top: 0;
+    color: var(--text-primary);
+  }
+
+  p {
+    color: var(--text-secondary);
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 640px) {
+  .test-page {
+    padding: var(--space-4);
+  }
+
+  .test-title {
+    font-size: var(--text-2xl);
+  }
+
+  .test-card {
+    padding: var(--space-4);
+  }
+
+  .test-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 </style>

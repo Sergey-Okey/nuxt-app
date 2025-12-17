@@ -7,9 +7,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
-// Components will be auto-imported
-</script>
+<script setup lang="ts"></script>
 
 <style scoped lang="scss">
 .layout {
