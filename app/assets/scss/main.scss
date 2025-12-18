@@ -1,29 +1,4 @@
-// assets/scss/main.scss
-// Configuration
-@use 'variables' as *;
-@use 'css-variables' as *;
-@use 'mixins' as *;
-
-// Base styles
-@use 'base' as *;
-
-// Global component styles
-.button,
-.input,
-.select,
-.checkbox,
-.radio,
-.card {
-  // Base styles for all interactive components
-  transition: all var(--duration-200) var(--ease-in-out);
-  
-  &:disabled {
-    opacity: var(--opacity-50);
-    cursor: not-allowed;
-    pointer-events: none;
-  }
-  
-  &:focus-visible {
-    @include focus-ring;
-  }
-}
+@import 'variables';
+@import 'mixins';
+@import 'base';
+@import 'themes';

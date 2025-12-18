@@ -1,0 +1,538 @@
+// Светлая тема (по умолчанию)
+:root {
+  // Цвета
+  @each $name, $color in map-get($colors, 'light') {
+    --color-#{$name}: #{$color};
+  }
+
+  // Приоритеты
+  @each $priority, $color in $priority-colors {
+    --priority-#{$priority}: #{$color};
+  }
+
+  // Категории
+  @each $category, $color in $category-colors {
+    --category-#{$category}: #{$color};
+    --category-#{$category}-rgb: #{red($color)}, #{green($color)},
+      #{blue($color)};
+  }
+
+  // RGB значения
+  --color-success-rgb: #{$color-success-rgb};
+  --color-warning-rgb: #{$color-warning-rgb};
+  --color-error-rgb: #{$color-error-rgb};
+  --color-accent-medium-rgb: #{$color-accent-medium-rgb};
+  --color-accent-high-rgb: #{$color-accent-high-rgb};
+
+  // Размеры
+  @each $name, $value in $spacing {
+    --spacing-#{$name}: #{$value};
+  }
+
+  @each $name, $value in $border-radius {
+    --radius-#{$name}: #{$value};
+  }
+
+  @each $name, $value in $font-sizes {
+    --font-#{$name}: #{$value};
+  }
+
+  @each $name, $value in $font-weights {
+    --font-weight-#{$name}: #{$value};
+  }
+
+  // Тени
+  --shadow-glass: #{map-get($glass-shadows, 'light')};
+
+  // Анимации
+  @each $name, $value in $transition {
+    --transition-#{$name}: #{$value};
+  }
+
+  // Z-индексы
+  @each $name, $value in $z-index {
+    --z-#{$name}: #{$value};
+  }
+}
+
+// Стили для светлой темы
+.light-theme {
+  color-scheme: light;
+
+  body {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+  }
+
+  // Стекломорфные контейнеры
+  .glass-container {
+    @include glass-container('light');
+  }
+
+  // Кнопки
+  .glass-button {
+    @include glass-button('light', 'md');
+    color: var(--color-text-primary);
+
+    &--sm {
+      @include glass-button('light', 'sm');
+    }
+
+    &--lg {
+      @include glass-button('light', 'lg');
+    }
+
+    &--primary {
+      background: rgba(var(--color-accent-high-rgb), 0.9);
+      color: white;
+
+      &:hover:not(:disabled) {
+        background: rgba(var(--color-accent-high-rgb), 1);
+      }
+    }
+  }
+
+  // Инпуты
+  .glass-input {
+    @include glass-input('light');
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-secondary);
+  }
+
+  // Карточки задач
+  .task-card {
+    @include task-card('light');
+    background-color: var(--color-bg-secondary);
+  }
+
+  // Виджеты аналитики
+  .analytics-widget {
+    @include analytics-widget('light');
+    background-color: var(--color-bg-secondary);
+  }
+
+  // Скроллбар
+  .scrollbar-custom {
+    @include custom-scrollbar('light');
+  }
+
+  // Скелетон
+  .skeleton {
+    @include skeleton-loading('light');
+  }
+
+  // Точки прогресса
+  .progress-dot {
+    @include progress-dot(8px, var(--color-accent-medium), true);
+
+    &--empty {
+      @include progress-dot(8px, var(--color-accent-medium), false);
+    }
+  }
+}
+
+// Темная тема
+.dark-theme {
+  color-scheme: dark;
+
+  body {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+  }
+
+  // Стекломорфные контейнеры
+  .glass-container {
+    @include glass-container('dark');
+  }
+
+  // Кнопки
+  .glass-button {
+    @include glass-button('dark', 'md');
+    color: var(--color-text-primary);
+
+    &--sm {
+      @include glass-button('dark', 'sm');
+    }
+
+    &--lg {
+      @include glass-button('dark', 'lg');
+    }
+
+    &--primary {
+      background: rgba(236, 240, 241, 0.9);
+      color: var(--color-bg-primary);
+
+      &:hover:not(:disabled) {
+        background: rgba(236, 240, 241, 1);
+      }
+    }
+  }
+
+  // Инпуты
+  .glass-input {
+    @include glass-input('dark');
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-secondary);
+  }
+
+  // Карточки задач
+  .task-card {
+    @include task-card('dark');
+    background-color: var(--color-bg-secondary);
+  }
+
+  // Виджеты аналитики
+  .analytics-widget {
+    @include analytics-widget('dark');
+    background-color: var(--color-bg-secondary);
+  }
+
+  // Скроллбар
+  .scrollbar-custom {
+    @include custom-scrollbar('dark');
+  }
+
+  // Скелетон
+  .skeleton {
+    @include skeleton-loading('dark');
+  }
+
+  // Точки прогресса
+  .progress-dot {
+    @include progress-dot(8px, var(--color-accent-medium), true);
+
+    &--empty {
+      @include progress-dot(8px, var(--color-accent-medium), false);
+    }
+  }
+}
+
+// Классы для приоритетов
+.priority {
+  &-low {
+    color: var(--priority-low);
+
+    .priority-badge {
+      background-color: var(--priority-low);
+    }
+  }
+
+  &-medium {
+    color: var(--priority-medium);
+
+    .priority-badge {
+      background-color: var(--priority-medium);
+    }
+  }
+
+  &-high {
+    color: var(--priority-high);
+
+    .priority-badge {
+      background-color: var(--priority-high);
+    }
+  }
+}
+
+// Классы для категорий
+.category-work {
+  color: var(--category-work);
+
+  .category-badge {
+    background-color: var(--category-work);
+    color: white;
+  }
+}
+
+.category-study {
+  color: var(--category-study);
+
+  .category-badge {
+    background-color: var(--category-study);
+    color: white;
+  }
+}
+
+.category-personal {
+  color: var(--category-personal);
+
+  .category-badge {
+    background-color: var(--category-personal);
+    color: white;
+  }
+}
+
+.category-health {
+  color: var(--category-health);
+
+  .category-badge {
+    background-color: var(--category-health);
+    color: white;
+  }
+}
+
+.category-other {
+  color: var(--category-other);
+
+  .category-badge {
+    background-color: var(--category-other);
+    color: white;
+  }
+}
+
+// Переключатель темы
+.theme-switch {
+  position: relative;
+  width: 60px;
+  height: 32px;
+
+  &__input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+
+    &:checked + .theme-switch__slider {
+      background-color: var(--color-accent-medium);
+
+      &::before {
+        transform: translateX(28px);
+        background-color: var(--color-text-primary);
+      }
+    }
+  }
+
+  &__slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-light);
+    transition: var(--transition-medium);
+    border-radius: var(--radius-full);
+
+    &::before {
+      position: absolute;
+      content: '';
+      height: 24px;
+      width: 24px;
+      left: 4px;
+      bottom: 3px;
+      background-color: var(--color-text-primary);
+      transition: var(--transition-medium);
+      border-radius: 50%;
+      @include glass-container();
+    }
+  }
+}
+
+// Модальные окна
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: var(--z-modal-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-md);
+
+  .dark & {
+    background-color: rgba(0, 0, 0, 0.7);
+  }
+}
+
+.modal-content {
+  @include glass-container();
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  z-index: var(--z-modal);
+  animation: modal-appear var(--transition-medium);
+
+  @keyframes modal-appear {
+    from {
+      opacity: 0;
+      transform: translateY(-20px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+}
+
+// Уведомления
+.notification {
+  @include glass-container();
+  position: fixed;
+  top: var(--spacing-lg);
+  right: var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
+  z-index: var(--z-tooltip);
+  animation: slide-in-right var(--transition-medium);
+
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  &--success {
+    border-left: 4px solid var(--color-success);
+  }
+
+  &--warning {
+    border-left: 4px solid var(--color-warning);
+  }
+
+  &--error {
+    border-left: 4px solid var(--color-error);
+  }
+}
+
+// Адаптивность - ИСПРАВЛЕННЫЙ КОД
+// Убираем интерполяцию с двоеточиями, используем отдельные классы
+.hidden {
+  &-xs {
+    @include respond-to('xs') {
+      display: none;
+    }
+  }
+
+  &-sm {
+    @include respond-to('sm') {
+      display: none;
+    }
+  }
+
+  &-md {
+    @include respond-to('md') {
+      display: none;
+    }
+  }
+
+  &-lg {
+    @include respond-to('lg') {
+      display: none;
+    }
+  }
+
+  &-xl {
+    @include respond-to('xl') {
+      display: none;
+    }
+  }
+
+  &-2xl {
+    @include respond-to('2xl') {
+      display: none;
+    }
+  }
+
+  &-3xl {
+    @include respond-to('3xl') {
+      display: none;
+    }
+  }
+}
+
+.block {
+  &-xs {
+    @include respond-to('xs') {
+      display: block;
+    }
+  }
+
+  &-sm {
+    @include respond-to('sm') {
+      display: block;
+    }
+  }
+
+  &-md {
+    @include respond-to('md') {
+      display: block;
+    }
+  }
+
+  &-lg {
+    @include respond-to('lg') {
+      display: block;
+    }
+  }
+
+  &-xl {
+    @include respond-to('xl') {
+      display: block;
+    }
+  }
+
+  &-2xl {
+    @include respond-to('2xl') {
+      display: block;
+    }
+  }
+
+  &-3xl {
+    @include respond-to('3xl') {
+      display: block;
+    }
+  }
+}
+
+.flex {
+  &-xs {
+    @include respond-to('xs') {
+      display: flex;
+    }
+  }
+
+  &-sm {
+    @include respond-to('sm') {
+      display: flex;
+    }
+  }
+
+  &-md {
+    @include respond-to('md') {
+      display: flex;
+    }
+  }
+
+  &-lg {
+    @include respond-to('lg') {
+      display: flex;
+    }
+  }
+
+  &-xl {
+    @include respond-to('xl') {
+      display: flex;
+    }
+  }
+
+  &-2xl {
+    @include respond-to('2xl') {
+      display: flex;
+    }
+  }
+
+  &-3xl {
+    @include respond-to('3xl') {
+      display: flex;
+    }
+  }
+}

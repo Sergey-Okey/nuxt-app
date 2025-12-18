@@ -1,268 +1,211 @@
-// =============================================================================
-// MIXINS
-// =============================================================================
-
-@use 'variables' as *;
-
-// Responsive breakpoints
-@mixin breakpoint($breakpoint) {
-  @if $breakpoint == xs {
-    @media (min-width: #{$breakpoint-xs}) { @content; }
-  } @else if $breakpoint == sm {
-    @media (min-width: #{$breakpoint-sm}) { @content; }
-  } @else if $breakpoint == md {
-    @media (min-width: #{$breakpoint-md}) { @content; }
-  } @else if $breakpoint == lg {
-    @media (min-width: #{$breakpoint-lg}) { @content; }
-  } @else if $breakpoint == xl {
-    @media (min-width: #{$breakpoint-xl}) { @content; }
-  } @else if $breakpoint == 2xl {
-    @media (min-width: #{$breakpoint-2xl}) { @content; }
-  } @else if $breakpoint == 3xl {
-    @media (min-width: #{$breakpoint-3xl}) { @content; }
-  } @else if $breakpoint == 4xl {
-    @media (min-width: #{$breakpoint-4xl}) { @content; }
-  } @else if $breakpoint == 5xl {
-    @media (min-width: #{$breakpoint-5xl}) { @content; }
-  } @else if $breakpoint == 6xl {
-    @media (min-width: #{$breakpoint-6xl}) { @content; }
+// Миксин для стекломорфного контейнера
+@mixin glass-container($theme: 'light') {
+  @if $theme == 'light' {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: map-get($glass-shadows, 'light');
+  } @else {
+    background: rgba(30, 33, 45, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: map-get($glass-shadows, 'dark');
   }
+
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: map-get($border-radius, 'md');
 }
 
-// Mobile-first responsive utilities
-@mixin responsive($property, $xs-value, $sm-value: null, $md-value: null, $lg-value: null, $xl-value: null) {
-  #{$property}: $xs-value;
-
-  @if $sm-value != null {
-    @include breakpoint(sm) {
-      #{$property}: $sm-value;
-    }
-  }
-
-  @if $md-value != null {
-    @include breakpoint(md) {
-      #{$property}: $md-value;
-    }
-  }
-
-  @if $lg-value != null {
-    @include breakpoint(lg) {
-      #{$property}: $lg-value;
-    }
-  }
-
-  @if $xl-value != null {
-    @include breakpoint(xl) {
-      #{$property}: $xl-value;
-    }
-  }
-}
-
-// Flex utilities
-@mixin flex-center {
-  display: flex;
+// Миксин для кнопок в стиле стекломорфизма
+@mixin glass-button($theme: 'light', $size: 'md') {
+  @include glass-container($theme);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-}
-
-@mixin flex-between {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-@mixin flex-start {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-}
-
-@mixin flex-end {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-@mixin flex-col($align: stretch, $justify: flex-start) {
-  display: flex;
-  flex-direction: column;
-  align-items: $align;
-  justify-content: $justify;
-}
-
-@mixin flex-row($align: center, $justify: flex-start) {
-  display: flex;
-  flex-direction: row;
-  align-items: $align;
-  justify-content: $justify;
-}
-
-// Grid utilities
-@mixin grid($columns: 1, $gap: $space-4) {
-  display: grid;
-  grid-template-columns: repeat($columns, 1fr);
-  gap: $gap;
-}
-
-// Card base styles
-@mixin card {
-  background: var(--card-bg);
-  border-radius: var(--radius-card);
-  border: 1px solid var(--border-light);
-  box-shadow: var(--shadow-base);
-  overflow: hidden;
-  
-  &:hover {
-    box-shadow: var(--shadow-hover);
-  }
-}
-
-@mixin card-flat {
-  background: var(--card-bg);
-  border-radius: var(--radius-card);
-  border: 1px solid var(--border-light);
-}
-
-// Button reset
-@mixin button-reset {
-  border: none;
-  background: none;
-  padding: 0;
-  margin: 0;
+  gap: map-get($spacing, 'sm');
+  padding: map-get($spacing, 'sm') map-get($spacing, 'lg');
+  font-weight: map-get($font-weights, 'medium');
+  font-size: map-get($font-sizes, 'base');
   cursor: pointer;
-  font-family: inherit;
-  color: inherit;
-  text-decoration: none;
-  display: inline-block;
-  text-align: center;
+  transition: all map-get($transition, 'fast');
   user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-// Focus styles
-@mixin focus-ring {
-  outline: 2px solid var(--text-primary);
-  outline-offset: 2px;
-}
-
-@mixin focus-ring-inset {
-  outline: 2px solid var(--text-primary);
-  outline-offset: -2px;
-}
-
-// Text truncation
-@mixin text-truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-@mixin text-truncate-multiline($lines: 2) {
-  display: -webkit-box;
-  -webkit-line-clamp: $lines;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-// Position utilities
-@mixin absolute-fill {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-}
-
-@mixin fixed-fill {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-}
-
-// Scrollbar styling
-@mixin scrollbar($size: 6px, $track-bg: var(--secondary-bg), $thumb-bg: var(--surface-bg)) {
-  &::-webkit-scrollbar {
-    width: $size;
-    height: $size;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: $track-bg;
-    border-radius: var(--radius-full);
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: $thumb-bg;
-    border-radius: var(--radius-full);
-    
-    &:hover {
-      background: var(--text-muted);
-    }
-  }
-
-  // Firefox
-  scrollbar-width: thin;
-  scrollbar-color: $thumb-bg $track-bg;
-}
-
-// Transition utilities
-@mixin transition-all($duration: $duration-200, $easing: $ease-in-out) {
-  transition: all $duration $easing;
-}
-
-@mixin transition($properties, $duration: $duration-200, $easing: $ease-in-out) {
-  transition: $properties $duration $easing;
-}
-
-// Visibility utilities
-@mixin sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-@mixin visually-hidden {
-  @include sr-only;
-}
-
-// Aspect ratio
-@mixin aspect-ratio($width, $height) {
   position: relative;
-  
+  overflow: hidden;
+
   &::before {
     content: '';
-    display: block;
-    padding-top: ($height / $width) * 100%;
-  }
-  
-  > * {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    opacity: 0;
+    transition: opacity map-get($transition, 'fast');
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+
+    &::before {
+      opacity: 1;
+    }
+
+    @if $theme == 'light' {
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    } @else {
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    transition-duration: 50ms;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  // Размеры кнопок
+  @if $size == 'sm' {
+    padding: map-get($spacing, 'xs') map-get($spacing, 'md');
+    font-size: map-get($font-sizes, 'sm');
+  } @else if $size == 'lg' {
+    padding: map-get($spacing, 'md') map-get($spacing, 'xl');
+    font-size: map-get($font-sizes, 'lg');
   }
 }
 
-// Loading skeleton
-@mixin skeleton {
+// Миксин для инпутов в стиле стекломорфизма
+@mixin glass-input($theme: 'light') {
+  @include glass-container($theme);
+  width: 100%;
+  height: map-get($heights, 'input');
+  padding: 0 map-get($spacing, 'md');
+  font-size: map-get($font-sizes, 'base');
+  transition: all map-get($transition, 'fast');
+
+  &::placeholder {
+    color: map-get(map-get($colors, $theme), 'text-muted');
+    opacity: 0.7;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: map-get(map-get($colors, $theme), 'border-medium');
+
+    @if $theme == 'light' {
+      box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.1),
+        map-get($glass-shadows, 'light');
+    } @else {
+      box-shadow: 0 0 0 3px rgba(236, 240, 241, 0.1),
+        map-get($glass-shadows, 'dark');
+    }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Миксин для карточек задач
+@mixin task-card($theme: 'light') {
+  @include glass-container($theme);
+  padding: map-get($spacing, 'lg');
+  margin-bottom: map-get($spacing, 'md');
+  transition: all map-get($transition, 'medium');
+
+  &:hover {
+    transform: translateY(-2px);
+
+    @if $theme == 'light' {
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    } @else {
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+  }
+}
+
+// Миксин для виджетов аналитики
+@mixin analytics-widget($theme: 'light') {
+  @include glass-container($theme);
+  padding: map-get($spacing, 'xl');
+  height: 100%;
+
+  h3 {
+    margin-bottom: map-get($spacing, 'lg');
+    font-size: map-get($font-sizes, 'lg');
+    font-weight: map-get($font-weights, 'semibold');
+  }
+}
+
+// Миксин для точек прогресса
+@mixin progress-dot($size: 8px, $color: #3498db, $filled: true) {
+  width: $size;
+  height: $size;
+  border-radius: 50%;
+  display: inline-block;
+  margin: 0 2px;
+  transition: all map-get($transition, 'fast');
+
+  @if $filled {
+    background-color: $color;
+    box-shadow: 0 0 8px rgba($color, 0.4);
+  } @else {
+    background-color: rgba($color, 0.2);
+    border: 1px solid rgba($color, 0.3);
+  }
+}
+
+// Миксин для адаптивности
+@mixin respond-to($breakpoint) {
+  @if map-has-key($breakpoints, $breakpoint) {
+    @media (min-width: map-get($breakpoints, $breakpoint)) {
+      @content;
+    }
+  } @else {
+    @warn "Breakpoint #{$breakpoint} не найден в $breakpoints";
+  }
+}
+
+// Миксин для анимации пульсации (для активного таймера)
+@mixin pulse-animation($color) {
+  animation: pulse 2s infinite;
+
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba($color, 0.7);
+    }
+    70% {
+      box-shadow: 0 0 0 6px rgba($color, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba($color, 0);
+    }
+  }
+}
+
+// Миксин для скелетона (загрузка)
+@mixin skeleton-loading($theme: 'light') {
   background: linear-gradient(
     90deg,
-    var(--surface-bg) 25%,
-    var(--card-bg) 50%,
-    var(--surface-bg) 75%
+    if($theme == 'light', rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.05)) 25%,
+    if($theme == 'light', rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1)) 50%,
+    if($theme == 'light', rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.05)) 75%
   );
   background-size: 200% 100%;
   animation: loading 1.5s infinite;
-  
+
   @keyframes loading {
     0% {
       background-position: 200% 0;
@@ -273,23 +216,43 @@
   }
 }
 
-// Container utilities
-@mixin container($max-width: null) {
-  width: 100%;
-  margin: 0 auto;
-  
-  @if $max-width != null {
-    max-width: $max-width;
+// Миксин для скроллбара
+@mixin custom-scrollbar($theme: 'light') {
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
   }
-  
-  @include responsive(padding-left, $space-4, $space-6, $space-8);
-  @include responsive(padding-right, $space-4, $space-6, $space-8);
-}
 
-// Safe area insets (для современных устройств с вырезами)
-@mixin safe-area-insets {
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
+  &::-webkit-scrollbar-track {
+    background: if(
+      $theme == 'light',
+      rgba(0, 0, 0, 0.05),
+      rgba(255, 255, 255, 0.05)
+    );
+    border-radius: map-get($border-radius, 'full');
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: if(
+      $theme == 'light',
+      rgba(0, 0, 0, 0.2),
+      rgba(255, 255, 255, 0.2)
+    );
+    border-radius: map-get($border-radius, 'full');
+
+    &:hover {
+      background: if(
+        $theme == 'light',
+        rgba(0, 0, 0, 0.3),
+        rgba(255, 255, 255, 0.3)
+      );
+    }
+  }
+
+  scrollbar-width: thin;
+  scrollbar-color: if(
+    $theme == 'light',
+    rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05),
+    rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05)
+  );
 }

@@ -1,225 +1,155 @@
-// =============================================================================
-// COLOR SYSTEM - Монохромная палитра
-// =============================================================================
+// Цветовая палитра
+$colors: (
+  'light': (
+    'bg-primary': #f5f7fa,
+    'bg-secondary': rgba(255, 255, 255, 0.7),
+    'bg-tertiary': rgba(255, 255, 255, 0.4),
+    'text-primary': #2c3e50,
+    'text-secondary': #7f8c8d,
+    'text-muted': #95a5a6,
+    'border-light': rgba(255, 255, 255, 0.4),
+    'border-medium': rgba(44, 62, 80, 0.1),
+    'border-dark': rgba(44, 62, 80, 0.2),
+    'shadow-light': rgba(0, 0, 0, 0.05),
+    'shadow-medium': rgba(0, 0, 0, 0.08),
+    'shadow-dark': rgba(0, 0, 0, 0.12),
+    'accent-low': #bdc3c7,
+    'accent-medium': #95a5a6,
+    'accent-high': #2c3e50,
+    'success': #27ae60,
+    'warning': #f39c12,
+    'error': #e74c3c,
+  ),
+  'dark': (
+    'bg-primary': #1a1d28,
+    'bg-secondary': rgba(30, 33, 45, 0.7),
+    'bg-tertiary': rgba(30, 33, 45, 0.4),
+    'text-primary': #ecf0f1,
+    'text-secondary': #bdc3c7,
+    'text-muted': #7f8c8d,
+    'border-light': rgba(255, 255, 255, 0.1),
+    'border-medium': rgba(255, 255, 255, 0.15),
+    'border-dark': rgba(255, 255, 255, 0.2),
+    'shadow-light': rgba(0, 0, 0, 0.2),
+    'shadow-medium': rgba(0, 0, 0, 0.3),
+    'shadow-dark': rgba(0, 0, 0, 0.4),
+    'accent-low': #34495e,
+    'accent-medium': #7f8c8d,
+    'accent-high': #ecf0f1,
+    'success': #2ecc71,
+    'warning': #f1c40f,
+    'error': #e74c3c,
+  ),
+);
 
-// Основные фоны
-$primary-bg: #0A0A0A !default;          // Основной фон
-$secondary-bg: #121212 !default;        // Вторичный фон
-$card-bg: #1A1A1A !default;            // Фон карточек
-$surface-bg: #222222 !default;          // Фон элементов
-$overlay-bg: rgba(0, 0, 0, 0.7) !default; // Фон оверлеев
+// Приоритеты задач
+$priority-colors: (
+  'low': #27ae60,
+  'medium': #f39c12,
+  'high': #e74c3c,
+);
 
-// Текст и акценты (только оттенки серого)
-$text-primary: #FFFFFF !default;        // Основной текст
-$text-secondary: #A0A0A0 !default;      // Вторичный текст
-$text-muted: #666666 !default;          // Неактивный текст
-$text-inverse: #000000 !default;        // Текст на светлом фоне
+// Категории (базовые цвета - можно менять в приложении)
+$category-colors: (
+  'work': #3498db,
+  'study': #9b59b6,
+  'personal': #1abc9c,
+  'health': #e74c3c,
+  'other': #95a5a6,
+);
 
-// Границы
-$border-primary: #333333 !default;      // Основные границы
-$border-secondary: #444444 !default;    // Вторичные границы
-$border-light: rgba(255, 255, 255, 0.08) !default; // Легкие границы
-$border-hover: rgba(255, 255, 255, 0.12) !default; // Границы при ховере
+// Размеры
+$spacing: (
+  'xs': 4px,
+  'sm': 8px,
+  'md': 16px,
+  'lg': 24px,
+  'xl': 32px,
+  'xxl': 48px,
+);
 
-// Статусы (монохромные варианты)
-$success: #E0E0E0 !default;             // Успех (светло-серый)
-$warning: #CCCCCC !default;             // Предупреждение (серый)
-$error: #AAAAAA !default;               // Ошибка (темно-серый)
-$info: #888888 !default;                // Информация
+$border-radius: (
+  'sm': 8px,
+  'md': 12px,
+  'lg': 16px,
+  'xl': 24px,
+  'full': 9999px,
+);
 
-// Интерактивные состояния
-$hover-bg: rgba(255, 255, 255, 0.05) !default;
-$active-bg: rgba(255, 255, 255, 0.08) !default;
-$selected-bg: rgba(255, 255, 255, 0.1) !default;
+// Тени стекломорфизма
+$glass-shadows: (
+  'light':
+    '0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+  'dark':
+    '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+);
 
-// =============================================================================
-// TYPOGRAPHY
-// =============================================================================
+// Анимации
+$transition: (
+  'fast': 150ms cubic-bezier(0.4, 0, 0.2, 1),
+  'medium': 250ms cubic-bezier(0.4, 0, 0.2, 1),
+  'slow': 350ms cubic-bezier(0.4, 0, 0.2, 1),
+);
 
-// Шрифты
-$font-family-primary: 'Montserrat', sans-serif !default;
-$font-family-mono: 'TT Firs Neue', 'SF Mono', 'Roboto Mono', monospace !default;
+// Типографика
+$font-sizes: (
+  'xs': 0.75rem,
+  'sm': 0.875rem,
+  'base': 1rem,
+  'lg': 1.125rem,
+  'xl': 1.25rem,
+  '2xl': 1.5rem,
+  '3xl': 1.875rem,
+  '4xl': 2.25rem,
+);
 
-// Размеры шрифтов (мобильный-first)
-$text-xs: 0.75rem !default;    // 12px
-$text-sm: 0.875rem !default;   // 14px  
-$text-base: 1rem !default;     // 16px
-$text-lg: 1.125rem !default;   // 18px
-$text-xl: 1.25rem !default;    // 20px
-$text-2xl: 1.5rem !default;    // 24px
-$text-3xl: 1.875rem !default;  // 30px
-$text-4xl: 2.25rem !default;   // 36px
-$text-5xl: 3rem !default;      // 48px
+$font-weights: (
+  'light': 300,
+  'normal': 400,
+  'medium': 500,
+  'semibold': 600,
+  'bold': 700,
+);
 
-// Веса шрифтов
-$font-light: 300 !default;
-$font-normal: 400 !default;
-$font-medium: 500 !default;
-$font-semibold: 600 !default;
-$font-bold: 700 !default;
+// Z-индексы
+$z-index: (
+  'dropdown': 1000,
+  'sticky': 1020,
+  'fixed': 1030,
+  'modal-backdrop': 1040,
+  'modal': 1050,
+  'popover': 1060,
+  'tooltip': 1070,
+);
 
-// Высота строки
-$leading-tight: 1.2 !default;
-$leading-normal: 1.4 !default;
-$leading-relaxed: 1.6 !default;
-$leading-loose: 1.8 !default;
+// Точки адаптива (mobile-first)
+$breakpoints: (
+  'xs': 300px,
+  'sm': 640px,
+  'md': 768px,
+  'lg': 1024px,
+  'xl': 1280px,
+  '2xl': 1536px,
+  '3xl': 2000px,
+);
 
-// Межбуквенный интервал
-$tracking-tight: -0.025em !default;
-$tracking-normal: 0 !default;
-$tracking-wide: 0.025em !default;
+// Высота элементов
+$heights: (
+  'input': 44px,
+  'button': 44px,
+  'header': 64px,
+  'task-card': auto,
+  'progress-bar': 4px,
+);
 
-// =============================================================================
-// SPACING SYSTEM (4px grid для точного контроля)
-// =============================================================================
-
-$space-0: 0 !default;
-$space-1: 0.25rem !default;   // 4px
-$space-2: 0.5rem !default;    // 8px
-$space-3: 0.75rem !default;   // 12px
-$space-4: 1rem !default;      // 16px
-$space-5: 1.25rem !default;   // 20px
-$space-6: 1.5rem !default;    // 24px
-$space-7: 1.75rem !default;   // 28px
-$space-8: 2rem !default;      // 32px
-$space-10: 2.5rem !default;   // 40px
-$space-12: 3rem !default;     // 48px
-$space-16: 4rem !default;     // 64px
-$space-20: 5rem !default;     // 80px
-$space-24: 6rem !default;     // 96px
-
-// =============================================================================
-// BORDER RADIUS
-// =============================================================================
-
-$radius-none: 0 !default;
-$radius-sm: 0.5rem !default;    // 8px
-$radius-base: 0.625rem !default;// 10px (по вашему запросу)
-$radius-md: 0.75rem !default;   // 12px
-$radius-lg: 1rem !default;      // 16px
-$radius-xl: 1.25rem !default;   // 20px
-$radius-2xl: 1.5rem !default;   // 24px
-$radius-full: 9999px !default;  // Полностью круглый
-
-// Компонентные радиусы
-$radius-card: $radius-base !default;
-$radius-button: $radius-base !default;
-$radius-input: $radius-base !default;
-$radius-modal: $radius-lg !default;
-$radius-fab: $radius-full !default;
-
-// =============================================================================
-// SHADOWS & ELEVATION (современные, быстрые)
-// =============================================================================
-
-// Тени для разных уровней глубины
-$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4) !default;
-$shadow-base: 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.5) !default;
-$shadow-md: 0 4px 8px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.4) !default;
-$shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.3) !default;
-$shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.15), 0 6px 12px rgba(0, 0, 0, 0.2) !default;
-
-// Интерактивные тени
-$shadow-hover: 0 6px 12px rgba(0, 0, 0, 0.25), 0 3px 6px rgba(0, 0, 0, 0.4) !default;
-$shadow-active: 0 2px 4px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.5) !default;
-$shadow-inset: inset 0 2px 4px rgba(0, 0, 0, 0.5) !default;
-
-// =============================================================================
-// ANIMATION & TRANSITIONS
-// =============================================================================
-
-// Длительности (быстрые анимации)
-$duration-75: 75ms !default;
-$duration-100: 0.1s !default;
-$duration-150: 0.15s !default;
-$duration-200: 0.2s !default;
-$duration-300: 0.3s !default;
-$duration-500: 0.5s !default;
-$duration-700: 0.7s !default;
-
-// Кривые easing (материал дизайн)
-$ease-linear: cubic-bezier(0, 0, 1, 1) !default;
-$ease-in: cubic-bezier(0.4, 0, 1, 1) !default;
-$ease-out: cubic-bezier(0, 0, 0.2, 1) !default;
-$ease-in-out: cubic-bezier(0.4, 0, 0.2, 1) !default;
-
-// Специфичные easing
-$ease-bounce: cubic-bezier(0.175, 0.885, 0.32, 1.275) !default;
-$ease-spring: cubic-bezier(0.68, -0.55, 0.265, 1.55) !default;
-
-// =============================================================================
-// BREAKPOINTS (полный охват 300px - 2000px+)
-// =============================================================================
-
-$breakpoint-xs: 320px !default;    // Очень маленькие телефоны
-$breakpoint-sm: 375px !default;    // Маленькие телефоны (iPhone SE)
-$breakpoint-md: 428px !default;    // Средние телефоны
-$breakpoint-lg: 768px !default;    // Планшеты (вертикально)
-$breakpoint-xl: 1024px !default;   // Планшеты (горизонтально)
-$breakpoint-2xl: 1280px !default;  // Ноутбуки
-$breakpoint-3xl: 1440px !default;  // Большие ноутбуки
-$breakpoint-4xl: 1680px !default;  // iMac
-$breakpoint-5xl: 1920px !default;  // Full HD
-$breakpoint-6xl: 2000px !default;  // 2K и выше
-
-// =============================================================================
-// Z-INDEX SYSTEM
-// =============================================================================
-
-$z-index-0: 0 !default;
-$z-index-10: 10 !default;
-$z-index-20: 20 !default;
-$z-index-30: 30 !default;
-$z-index-40: 40 !default;
-$z-index-50: 50 !default;
-$z-index-auto: auto !default;
-
-// Семантические z-index
-$z-dropdown: $z-index-10 !default;
-$z-sticky: $z-index-20 !default;
-$z-fixed: $z-index-30 !default;
-$z-modal-backdrop: $z-index-40 !default;
-$z-modal: $z-index-50 !default;
-$z-popover: $z-index-20 !default;
-$z-tooltip: $z-index-30 !default;
-$z-toast: $z-index-50 !default;
-
-// =============================================================================
-// LAYOUT CONSTANTS
-// =============================================================================
-
-// Максимальные ширины
-$max-width-xs: 20rem !default;    // 320px
-$max-width-sm: 24rem !default;    // 384px
-$max-width-md: 28rem !default;    // 448px
-$max-width-lg: 32rem !default;    // 512px
-$max-width-xl: 36rem !default;    // 576px
-$max-width-2xl: 42rem !default;   // 672px
-$max-width-3xl: 48rem !default;   // 768px
-$max-width-4xl: 56rem !default;   // 896px
-$max-width-5xl: 64rem !default;   // 1024px
-$max-width-6xl: 72rem !default;   // 1152px
-$max-width-7xl: 80rem !default;   // 1280px
-
-// Высоты
-$header-height: 3.5rem !default;
-$footer-height: 3.5rem !default;
-$sidebar-width: 16rem !default;
-
-// =============================================================================
-// OTHER
-// =============================================================================
-
-// Непрозрачность
-$opacity-0: 0 !default;
-$opacity-25: 0.25 !default;
-$opacity-50: 0.5 !default;
-$opacity-75: 0.75 !default;
-$opacity-100: 1 !default;
-
-// Blur эффекты
-$blur-sm: 4px !default;
-$blur-base: 8px !default;
-$blur-md: 12px !default;
-$blur-lg: 16px !default;
-$blur-xl: 24px !default;
+// RGB значения для прозрачности
+$color-success-rgb: 39, 174, 96;
+$color-warning-rgb: 243, 156, 18;
+$color-error-rgb: 231, 76, 60;
+$color-accent-medium-rgb: 149, 165, 166;
+$color-accent-high-rgb: 44, 62, 80;
+$category-work-rgb: 52, 152, 219;
+$category-study-rgb: 155, 89, 182;
+$category-personal-rgb: 26, 188, 156;
+$category-health-rgb: 231, 76, 60;
+$category-other-rgb: 149, 165, 166;

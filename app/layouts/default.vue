@@ -1,25 +1,59 @@
-<template>
-  <div class="layout">
-    <!-- Main Content Area - pages will be rendered here -->
-    <main class="layout-main">
-      <slot />
-    </main>
-  </div>
-</template>
-
-<script setup lang="ts"></script>
+<template></template>
 
 <style scoped lang="scss">
-.layout {
-  min-height: 100vh;
-  background: var(--primary-bg);
+.app-layout {
   display: flex;
-  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
 }
 
-.layout-main {
+.sidebar-desktop {
+  display: none;
+
+  @media (min-width: 769px) {
+    display: block;
+  }
+}
+
+.mobile-header {
+  display: block;
+
+  @media (min-width: 769px) {
+    display: none;
+  }
+}
+
+.mobile-bottom-nav {
+  display: block;
+
+  @media (min-width: 769px) {
+    display: none;
+  }
+}
+
+.main-content {
   flex: 1;
-  padding-bottom: 80px; // Space for bottom nav
-  overflow-x: hidden;
+  overflow-y: auto;
+  padding-bottom: 70px;
+
+  @media (min-width: 769px) {
+    padding-bottom: 0;
+  }
+}
+
+.page-container {
+  padding: var(--spacing-lg);
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    padding: var(--spacing-md);
+  }
+
+  @media (max-width: 480px) {
+    padding: var(--spacing-sm);
+  }
 }
 </style>

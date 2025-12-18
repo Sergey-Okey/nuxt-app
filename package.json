@@ -22,6 +22,8 @@
     "apexcharts": "^5.3.6",
     "gsap": "^3.13.0",
     "nuxt": "^4.2.1",
+    "nuxt-gpt": "^0.1.5",
+    "nuxt-icons": "^4.0.0",
     "uuid": "^13.0.0",
     "v-calendar": "^3.1.2",
     "vue": "^3.5.22",
@@ -29,7 +31,6 @@
     "vue3-apexcharts": "^1.10.0"
   },
   "devDependencies": {
-    "sass-embedded": "^1.93.3",
-    "vue-tsc": "^3.1.8"
+    "sass-embedded": "^1.93.3"
   }
 }
