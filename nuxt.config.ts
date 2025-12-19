@@ -1,60 +1,98 @@
+// nuxt.config.ts
 export default defineNuxtConfig({
-  // TypeScript настройки
+  compatibilityDate: '2024-11-12',
+
+  devtools: { enabled: true },
+
   typescript: {
     strict: true,
     shim: false,
   },
 
-  // Auto-imports настройки
   imports: {
-    dirs: ['stores', 'composables', 'types', 'components/**/*'],
+    dirs: ['stores', 'composables'],
   },
 
-  // Компоненты
   components: [
     {
       path: '~/components',
       pathPrefix: false,
-      extensions: ['vue'],
     },
   ],
 
-  // Модули
-  modules: ['@vueuse/nuxt', '@pinia/nuxt', 'nuxt-icons'],
+  modules: [
+    '@vueuse/nuxt',
+    '@pinia/nuxt',
+    'nuxt-icons',
+    '@nuxtjs/color-mode',
+    '@nuxtjs/google-fonts',
+  ],
 
-  // Vueuse настройки
-  vueuse: {
-    ssrHandlers: true,
+  googleFonts: {
+    families: {
+      Inter: [300, 400, 500, 600, 700],
+      Roboto: [300, 400, 500],
+      'Segoe UI': [400, 600, 700],
+      'JetBrains Mono': [400, 500],
+    },
+    display: 'swap',
+    preload: true,
+    download: true,
   },
 
-  // Сборка
-  build: {
-    transpile: ['pinia'],
+  colorMode: {
+    classSuffix: '',
+    preference: 'system',
+    fallback: 'light',
+    storageKey: 'app-theme',
   },
 
-  // CSS
-  css: ['@/assets/scss/main.scss'],
+  // Основные стили - подключаем main.scss
+  css: ['~/assets/scss/main.scss'],
 
-  // Vite настройки
   vite: {
     css: {
       preprocessorOptions: {
         scss: {
+          // Подключаем только переменные и миксины глобально
+          // Остальные стили будут через main.scss
           additionalData: `
-            @import "@/assets/scss/variables";
-            @import "@/assets/scss/mixins";
+            @import "~/assets/scss/_variables.scss";
+            @import "~/assets/scss/_mixins.scss";
           `,
         },
       },
     },
   },
 
-  // SSR
+  sourcemap: {
+    server: process.env.NODE_ENV !== 'production',
+    client: process.env.NODE_ENV !== 'production',
+  },
+
   ssr: true,
 
-  // Sourcemap для разработки
-  sourcemap: {
-    server: true,
-    client: true,
+  nitro: {
+    compressPublicAssets: true,
+    routeRules: {
+      '/_nuxt/**': { headers: { 'cache-control': 'max-age=31536000' } },
+    },
+  },
+
+  app: {
+    head: {
+      charset: 'utf-8',
+      viewport: 'width=device-width, initial-scale=1',
+      title: 'Toka',
+      meta: [{ name: 'description', content: 'Toka Application' }],
+      link: [{ rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }],
+    },
+  },
+
+  runtimeConfig: {
+    public: {
+      appName: 'Toka',
+      appVersion: process.env.npm_package_version || '1.0.0',
+    },
   },
 })

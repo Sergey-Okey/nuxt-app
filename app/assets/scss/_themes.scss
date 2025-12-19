@@ -1,538 +1,252 @@
-// Светлая тема (по умолчанию)
+// Базовая светлая тема (по умолчанию)
 :root {
-  // Цвета
-  @each $name, $color in map-get($colors, 'light') {
-    --color-#{$name}: #{$color};
-  }
+  // Цвета фона
+  --color-bg-primary: #{$color-gray-50};
+  --color-bg-secondary: #{$color-gray-100};
+  --color-bg-tertiary: #{$color-gray-200};
 
-  // Приоритеты
-  @each $priority, $color in $priority-colors {
-    --priority-#{$priority}: #{$color};
-  }
+  // Цвета текста
+  --color-text-primary: #{$color-gray-900};
+  --color-text-secondary: #{$color-gray-700};
+  --color-text-tertiary: #{$color-gray-500};
+  --color-text-inverse: #{$color-white};
 
-  // Категории
-  @each $category, $color in $category-colors {
-    --category-#{$category}: #{$color};
-    --category-#{$category}-rgb: #{red($color)}, #{green($color)},
-      #{blue($color)};
-  }
+  // Цвета границ
+  --color-border-light: rgba(0, 0, 0, 0.1);
+  --color-border-medium: rgba(0, 0, 0, 0.2);
+  --color-border-heavy: rgba(0, 0, 0, 0.3);
 
-  // RGB значения
-  --color-success-rgb: #{$color-success-rgb};
-  --color-warning-rgb: #{$color-warning-rgb};
-  --color-error-rgb: #{$color-error-rgb};
-  --color-accent-medium-rgb: #{$color-accent-medium-rgb};
-  --color-accent-high-rgb: #{$color-accent-high-rgb};
-
-  // Размеры
-  @each $name, $value in $spacing {
-    --spacing-#{$name}: #{$value};
-  }
-
-  @each $name, $value in $border-radius {
-    --radius-#{$name}: #{$value};
-  }
-
-  @each $name, $value in $font-sizes {
-    --font-#{$name}: #{$value};
-  }
-
-  @each $name, $value in $font-weights {
-    --font-weight-#{$name}: #{$value};
-  }
+  // Стеклоэффекты
+  --glass-bg-light: rgba(255, 255, 255, #{$glass-opacity-light});
+  --glass-bg-medium: rgba(255, 255, 255, #{$glass-opacity-medium});
+  --glass-bg-heavy: rgba(255, 255, 255, #{$glass-opacity-heavy});
+  --glass-border-light: rgba(255, 255, 255, 0.1);
+  --glass-border-medium: rgba(255, 255, 255, 0.15);
+  --glass-border-heavy: rgba(255, 255, 255, 0.2);
 
   // Тени
-  --shadow-glass: #{map-get($glass-shadows, 'light')};
+  --shadow-color: rgba(0, 0, 0, 0.1);
 
-  // Анимации
-  @each $name, $value in $transition {
-    --transition-#{$name}: #{$value};
-  }
+  // Состояния
+  --color-hover: rgba(0, 0, 0, 0.05);
+  --color-active: rgba(0, 0, 0, 0.1);
+  --color-disabled: rgba(0, 0, 0, 0.3);
 
-  // Z-индексы
-  @each $name, $value in $z-index {
-    --z-#{$name}: #{$value};
-  }
-}
+  // Акцентные цвета (минимализм - только оттенки серого)
+  --color-accent-light: #{$color-gray-300};
+  --color-accent: #{$color-gray-600};
+  --color-accent-dark: #{$color-gray-800};
 
-// Стили для светлой темы
-.light-theme {
-  color-scheme: light;
-
-  body {
-    background-color: var(--color-bg-primary);
-    color: var(--color-text-primary);
-  }
-
-  // Стекломорфные контейнеры
-  .glass-container {
-    @include glass-container('light');
-  }
-
-  // Кнопки
-  .glass-button {
-    @include glass-button('light', 'md');
-    color: var(--color-text-primary);
-
-    &--sm {
-      @include glass-button('light', 'sm');
-    }
-
-    &--lg {
-      @include glass-button('light', 'lg');
-    }
-
-    &--primary {
-      background: rgba(var(--color-accent-high-rgb), 0.9);
-      color: white;
-
-      &:hover:not(:disabled) {
-        background: rgba(var(--color-accent-high-rgb), 1);
-      }
-    }
-  }
-
-  // Инпуты
-  .glass-input {
-    @include glass-input('light');
-    color: var(--color-text-primary);
-    background-color: var(--color-bg-secondary);
-  }
-
-  // Карточки задач
-  .task-card {
-    @include task-card('light');
-    background-color: var(--color-bg-secondary);
-  }
-
-  // Виджеты аналитики
-  .analytics-widget {
-    @include analytics-widget('light');
-    background-color: var(--color-bg-secondary);
-  }
-
-  // Скроллбар
-  .scrollbar-custom {
-    @include custom-scrollbar('light');
-  }
-
-  // Скелетон
-  .skeleton {
-    @include skeleton-loading('light');
-  }
-
-  // Точки прогресса
-  .progress-dot {
-    @include progress-dot(8px, var(--color-accent-medium), true);
-
-    &--empty {
-      @include progress-dot(8px, var(--color-accent-medium), false);
-    }
-  }
+  // Оверлеи
+  --overlay-light: rgba(255, 255, 255, 0.8);
+  --overlay-dark: rgba(0, 0, 0, 0.5);
 }
 
 // Темная тема
-.dark-theme {
-  color-scheme: dark;
+[data-theme='dark'],
+.dark-mode {
+  // Цвета фона
+  --color-bg-primary: #{$color-gray-900};
+  --color-bg-secondary: #{$color-gray-800};
+  --color-bg-tertiary: #{$color-gray-700};
 
-  body {
-    background-color: var(--color-bg-primary);
-    color: var(--color-text-primary);
+  // Цвета текста
+  --color-text-primary: #{$color-gray-100};
+  --color-text-secondary: #{$color-gray-300};
+  --color-text-tertiary: #{$color-gray-500};
+  --color-text-inverse: #{$color-gray-900};
+
+  // Цвета границ
+  --color-border-light: rgba(255, 255, 255, 0.1);
+  --color-border-medium: rgba(255, 255, 255, 0.2);
+  --color-border-heavy: rgba(255, 255, 255, 0.3);
+
+  // Стеклоэффекты
+  --glass-bg-light: rgba(0, 0, 0, #{$glass-opacity-light});
+  --glass-bg-medium: rgba(0, 0, 0, #{$glass-opacity-medium});
+  --glass-bg-heavy: rgba(0, 0, 0, #{$glass-opacity-heavy});
+  --glass-border-light: rgba(255, 255, 255, 0.05);
+  --glass-border-medium: rgba(255, 255, 255, 0.1);
+  --glass-border-heavy: rgba(255, 255, 255, 0.15);
+
+  // Тени
+  --shadow-color: rgba(0, 0, 0, 0.3);
+
+  // Состояния
+  --color-hover: rgba(255, 255, 255, 0.05);
+  --color-active: rgba(255, 255, 255, 0.1);
+  --color-disabled: rgba(255, 255, 255, 0.3);
+
+  // Акцентные цвета
+  --color-accent-light: #{$color-gray-600};
+  --color-accent: #{$color-gray-400};
+  --color-accent-dark: #{$color-gray-200};
+
+  // Оверлеи
+  --overlay-light: rgba(0, 0, 0, 0.8);
+  --overlay-dark: rgba(255, 255, 255, 0.1);
+}
+
+// Применение переменных темы
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+// Классы для использования переменных темы
+.bg-primary {
+  background-color: var(--color-bg-primary);
+}
+
+.bg-secondary {
+  background-color: var(--color-bg-secondary);
+}
+
+.bg-tertiary {
+  background-color: var(--color-bg-tertiary);
+}
+
+.text-primary {
+  color: var(--color-text-primary);
+}
+
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+
+.text-tertiary {
+  color: var(--color-text-tertiary);
+}
+
+.text-inverse {
+  color: var(--color-text-inverse);
+}
+
+.border-light {
+  border: 1px solid var(--color-border-light);
+}
+
+.border-medium {
+  border: 1px solid var(--color-border-medium);
+}
+
+.border-heavy {
+  border: 1px solid var(--color-border-heavy);
+}
+
+.glass-bg-light {
+  background: var(--glass-bg-light);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border-light);
+}
+
+.glass-bg-medium {
+  background: var(--glass-bg-medium);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid var(--glass-border-medium);
+}
+
+.glass-bg-heavy {
+  background: var(--glass-bg-heavy);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border-heavy);
+}
+
+// Градиенты с учетом темы
+.gradient-mono {
+  background: linear-gradient(
+    to right,
+    var(--glass-bg-light) 0%,
+    var(--glass-bg-medium) 50%,
+    var(--glass-bg-light) 100%
+  );
+}
+
+// Тени с учетом темы
+.shadow-theme-sm {
+  box-shadow: 0 1px 2px var(--shadow-color);
+}
+
+.shadow-theme-md {
+  box-shadow: 0 4px 6px -1px var(--shadow-color),
+    0 2px 4px -1px var(--shadow-color);
+}
+
+.shadow-theme-lg {
+  box-shadow: 0 10px 15px -3px var(--shadow-color),
+    0 4px 6px -2px var(--shadow-color);
+}
+
+// Кнопки с учетом темы
+.btn-theme {
+  background-color: var(--glass-bg-medium);
+  color: var(--color-text-primary);
+  border: 1px solid var(--glass-border-medium);
+  padding: 0.75rem 1.5rem;
+  border-radius: $border-radius-lg;
+  transition: all $transition-fast;
+
+  &:hover:not(:disabled) {
+    background-color: var(--glass-bg-heavy);
+    transform: translateY(-1px);
   }
 
-  // Стекломорфные контейнеры
-  .glass-container {
-    @include glass-container('dark');
+  &:active:not(:disabled) {
+    transform: translateY(0);
   }
 
-  // Кнопки
-  .glass-button {
-    @include glass-button('dark', 'md');
-    color: var(--color-text-primary);
-
-    &--sm {
-      @include glass-button('dark', 'sm');
-    }
-
-    &--lg {
-      @include glass-button('dark', 'lg');
-    }
-
-    &--primary {
-      background: rgba(236, 240, 241, 0.9);
-      color: var(--color-bg-primary);
-
-      &:hover:not(:disabled) {
-        background: rgba(236, 240, 241, 1);
-      }
-    }
-  }
-
-  // Инпуты
-  .glass-input {
-    @include glass-input('dark');
-    color: var(--color-text-primary);
-    background-color: var(--color-bg-secondary);
-  }
-
-  // Карточки задач
-  .task-card {
-    @include task-card('dark');
-    background-color: var(--color-bg-secondary);
-  }
-
-  // Виджеты аналитики
-  .analytics-widget {
-    @include analytics-widget('dark');
-    background-color: var(--color-bg-secondary);
-  }
-
-  // Скроллбар
-  .scrollbar-custom {
-    @include custom-scrollbar('dark');
-  }
-
-  // Скелетон
-  .skeleton {
-    @include skeleton-loading('dark');
-  }
-
-  // Точки прогресса
-  .progress-dot {
-    @include progress-dot(8px, var(--color-accent-medium), true);
-
-    &--empty {
-      @include progress-dot(8px, var(--color-accent-medium), false);
-    }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 }
 
-// Классы для приоритетов
-.priority {
-  &-low {
-    color: var(--priority-low);
+// Карточки с учетом темы
+.card-theme {
+  background: var(--glass-bg-medium);
+  border: 1px solid var(--glass-border-medium);
+  border-radius: $border-radius-xl;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px var(--shadow-color),
+    0 2px 4px -1px var(--shadow-color);
 
-    .priority-badge {
-      background-color: var(--priority-low);
-    }
-  }
-
-  &-medium {
-    color: var(--priority-medium);
-
-    .priority-badge {
-      background-color: var(--priority-medium);
-    }
-  }
-
-  &-high {
-    color: var(--priority-high);
-
-    .priority-badge {
-      background-color: var(--priority-high);
-    }
+  @include respond-to(lg) {
+    padding: 2rem;
   }
 }
 
-// Классы для категорий
-.category-work {
-  color: var(--category-work);
+// Состояния hover/active с учетом темы
+.hover-theme {
+  &:hover {
+    background-color: var(--color-hover);
+  }
 
-  .category-badge {
-    background-color: var(--category-work);
-    color: white;
+  &:active {
+    background-color: var(--color-active);
   }
 }
 
-.category-study {
-  color: var(--category-study);
-
-  .category-badge {
-    background-color: var(--category-study);
-    color: white;
-  }
+// Акцентные элементы
+.accent-light {
+  color: var(--color-accent-light);
 }
 
-.category-personal {
-  color: var(--category-personal);
-
-  .category-badge {
-    background-color: var(--category-personal);
-    color: white;
-  }
+.accent {
+  color: var(--color-accent);
 }
 
-.category-health {
-  color: var(--category-health);
-
-  .category-badge {
-    background-color: var(--category-health);
-    color: white;
-  }
+.accent-dark {
+  color: var(--color-accent-dark);
 }
 
-.category-other {
-  color: var(--category-other);
-
-  .category-badge {
-    background-color: var(--category-other);
-    color: white;
-  }
+// Оверлеи
+.overlay-light {
+  background-color: var(--overlay-light);
 }
 
-// Переключатель темы
-.theme-switch {
-  position: relative;
-  width: 60px;
-  height: 32px;
-
-  &__input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-
-    &:checked + .theme-switch__slider {
-      background-color: var(--color-accent-medium);
-
-      &::before {
-        transform: translateX(28px);
-        background-color: var(--color-text-primary);
-      }
-    }
-  }
-
-  &__slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: var(--color-bg-tertiary);
-    border: 1px solid var(--color-border-light);
-    transition: var(--transition-medium);
-    border-radius: var(--radius-full);
-
-    &::before {
-      position: absolute;
-      content: '';
-      height: 24px;
-      width: 24px;
-      left: 4px;
-      bottom: 3px;
-      background-color: var(--color-text-primary);
-      transition: var(--transition-medium);
-      border-radius: 50%;
-      @include glass-container();
-    }
-  }
-}
-
-// Модальные окна
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  z-index: var(--z-modal-backdrop);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-md);
-
-  .dark & {
-    background-color: rgba(0, 0, 0, 0.7);
-  }
-}
-
-.modal-content {
-  @include glass-container();
-  max-width: 500px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  z-index: var(--z-modal);
-  animation: modal-appear var(--transition-medium);
-
-  @keyframes modal-appear {
-    from {
-      opacity: 0;
-      transform: translateY(-20px) scale(0.95);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-}
-
-// Уведомления
-.notification {
-  @include glass-container();
-  position: fixed;
-  top: var(--spacing-lg);
-  right: var(--spacing-lg);
-  padding: var(--spacing-md) var(--spacing-lg);
-  z-index: var(--z-tooltip);
-  animation: slide-in-right var(--transition-medium);
-
-  @keyframes slide-in-right {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
-  &--success {
-    border-left: 4px solid var(--color-success);
-  }
-
-  &--warning {
-    border-left: 4px solid var(--color-warning);
-  }
-
-  &--error {
-    border-left: 4px solid var(--color-error);
-  }
-}
-
-// Адаптивность - ИСПРАВЛЕННЫЙ КОД
-// Убираем интерполяцию с двоеточиями, используем отдельные классы
-.hidden {
-  &-xs {
-    @include respond-to('xs') {
-      display: none;
-    }
-  }
-
-  &-sm {
-    @include respond-to('sm') {
-      display: none;
-    }
-  }
-
-  &-md {
-    @include respond-to('md') {
-      display: none;
-    }
-  }
-
-  &-lg {
-    @include respond-to('lg') {
-      display: none;
-    }
-  }
-
-  &-xl {
-    @include respond-to('xl') {
-      display: none;
-    }
-  }
-
-  &-2xl {
-    @include respond-to('2xl') {
-      display: none;
-    }
-  }
-
-  &-3xl {
-    @include respond-to('3xl') {
-      display: none;
-    }
-  }
-}
-
-.block {
-  &-xs {
-    @include respond-to('xs') {
-      display: block;
-    }
-  }
-
-  &-sm {
-    @include respond-to('sm') {
-      display: block;
-    }
-  }
-
-  &-md {
-    @include respond-to('md') {
-      display: block;
-    }
-  }
-
-  &-lg {
-    @include respond-to('lg') {
-      display: block;
-    }
-  }
-
-  &-xl {
-    @include respond-to('xl') {
-      display: block;
-    }
-  }
-
-  &-2xl {
-    @include respond-to('2xl') {
-      display: block;
-    }
-  }
-
-  &-3xl {
-    @include respond-to('3xl') {
-      display: block;
-    }
-  }
-}
-
-.flex {
-  &-xs {
-    @include respond-to('xs') {
-      display: flex;
-    }
-  }
-
-  &-sm {
-    @include respond-to('sm') {
-      display: flex;
-    }
-  }
-
-  &-md {
-    @include respond-to('md') {
-      display: flex;
-    }
-  }
-
-  &-lg {
-    @include respond-to('lg') {
-      display: flex;
-    }
-  }
-
-  &-xl {
-    @include respond-to('xl') {
-      display: flex;
-    }
-  }
-
-  &-2xl {
-    @include respond-to('2xl') {
-      display: flex;
-    }
-  }
-
-  &-3xl {
-    @include respond-to('3xl') {
-      display: flex;
-    }
-  }
+.overlay-dark {
+  background-color: var(--overlay-dark);
 }

@@ -1,4 +1,12 @@
-<template></template>
+<template>
+  <div class="app-layout">
+    <main class="main-content">
+      <div class="page-container">
+        <slot />
+      </div>
+    </main>
+  </div>
+</template>
 
 <style scoped lang="scss">
 .app-layout {
@@ -8,52 +16,28 @@
   color: var(--color-text-primary);
 }
 
-.sidebar-desktop {
-  display: none;
-
-  @media (min-width: 769px) {
-    display: block;
-  }
-}
-
-.mobile-header {
-  display: block;
-
-  @media (min-width: 769px) {
-    display: none;
-  }
-}
-
-.mobile-bottom-nav {
-  display: block;
-
-  @media (min-width: 769px) {
-    display: none;
-  }
-}
-
 .main-content {
   flex: 1;
   overflow-y: auto;
   padding-bottom: 70px;
 
-  @media (min-width: 769px) {
+  @include respond-to(md) {
     padding-bottom: 0;
   }
 }
 
 .page-container {
-  padding: var(--spacing-lg);
+  padding: 2rem;
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
 
-  @media (max-width: 768px) {
-    padding: var(--spacing-md);
+  @include respond-to(sm) {
+    padding: 1.5rem;
   }
 
-  @media (max-width: 480px) {
-    padding: var(--spacing-sm);
+  @include respond-to(xs) {
+    padding: 1rem;
   }
 }
 </style>
