@@ -28,7 +28,7 @@ export default defineNuxtConfig({
   modules: [
     '@vueuse/nuxt',
     '@pinia/nuxt',
-    'nuxt-icon',
+    'nuxt-icons',
     '@nuxtjs/color-mode',
     '@nuxtjs/google-fonts',
   ],
