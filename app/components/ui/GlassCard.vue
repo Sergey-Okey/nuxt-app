@@ -13,17 +13,29 @@ defineProps<{
 <style scoped lang="scss">
 .glass-card {
   width: 100%;
-}
+  background: var(--glass-bg-medium);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid var(--glass-border-medium);
+  border-radius: $border-radius-xl;
+  box-shadow: $shadow-md;
+  transition: all $transition-base;
 
-.p-sm {
-  padding: 12px;
-}
+  &:hover {
+    box-shadow: $shadow-lg;
+    transform: translateY(-2px);
+  }
 
-.p-md {
-  padding: 16px;
-}
+  &.p-sm {
+    padding: 16px;
+  }
 
-.p-lg {
-  padding: 24px;
+  &.p-md {
+    padding: 20px;
+  }
+
+  &.p-lg {
+    padding: 28px;
+  }
 }
 </style>

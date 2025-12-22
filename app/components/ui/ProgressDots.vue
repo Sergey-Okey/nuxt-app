@@ -43,6 +43,6 @@ const totalDots = computed(() => {
 }
 
 .dot.filled {
-  background: $white;
+  background: $color-white;
 }
 </style>

@@ -6,10 +6,11 @@
 
 <script setup lang="ts">
 // Инициализация темы
-const userStore = useUserStore()
+const settingsStore = useSettingsStore()
 
 onMounted(() => {
-  userStore.initializeTheme()
+  // Тема уже инициализирована через colorMode модуль
+  // Можно добавить дополнительную логику при необходимости
 })
 </script>
 

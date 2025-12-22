@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import GlassCard from './GlassCard.vue'
 import ProgressDots from './ProgressDots.vue'
 import TimeDisplay from './TimeDisplay.vue'
@@ -10,7 +11,7 @@ interface Props {
   isActive?: boolean
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
   start: [taskId: string]
@@ -21,7 +22,7 @@ const emit = defineEmits<{
 }>()
 
 const totalTime = computed(() =>
-  task.sessions.reduce((sum, session) => sum + session.duration, 0)
+  props.task.sessions.reduce((sum, session) => sum + session.duration, 0)
 )
 
 const priorityColors: Record<TaskPriority, string> = {
@@ -35,37 +36,37 @@ const priorityColors: Record<TaskPriority, string> = {
   <GlassCard class="task-card" :class="{ 'is-active': isActive }">
     <div class="task-header">
       <div class="task-title-section">
-        <h3 class="task-title">{{ task.title }}</h3>
+        <h3 class="task-title">{{ props.task.title }}</h3>
         <span
           class="task-priority-badge"
-          :style="{ backgroundColor: priorityColors[task.priority] }"
+          :style="{ backgroundColor: priorityColors[props.task.priority] }"
         >
-          {{ task.priority }}
+          {{ props.task.priority }}
         </span>
       </div>
 
       <div class="task-time">
         <TimeDisplay :milliseconds="totalTime" />
-        <span v-if="task.estimatedTime" class="task-estimated">
-          / {{ task.estimatedTime }}m
+        <span v-if="props.task.estimatedTime" class="task-estimated">
+          / {{ props.task.estimatedTime }}m
         </span>
       </div>
     </div>
 
-    <p v-if="task.description" class="task-description">
-      {{ task.description }}
+    <p v-if="props.task.description" class="task-description">
+      {{ props.task.description }}
     </p>
 
     <div class="task-progress">
       <ProgressDots
         :total-time="totalTime"
-        :estimated-time="task.estimatedTime"
+        :estimated-time="props.task.estimatedTime"
       />
     </div>
 
-    <div v-if="task.tagIds.length" class="task-tags">
+    <div v-if="props.task.tagIds.length" class="task-tags">
       <TagBadge
-        v-for="tagId in task.tagIds"
+        v-for="tagId in props.task.tagIds"
         :key="tagId"
         :label="`Tag ${tagId.slice(0, 3)}`"
         color="var(--color-accent-light)"
@@ -75,35 +76,35 @@ const priorityColors: Record<TaskPriority, string> = {
 
     <div class="task-actions">
       <button
-        v-if="!isActive"
+        v-if="!props.isActive"
         class="task-action-btn glass"
-        @click="emit('start', task.id)"
+        @click="emit('start', props.task.id)"
       >
         Start
       </button>
       <button
         v-else
         class="task-action-btn glass active"
-        @click="emit('pause', task.id)"
+        @click="emit('pause', props.task.id)"
       >
         Pause
       </button>
 
       <button
-        v-if="task.status === 'active'"
+        v-if="props.task.status === 'active'"
         class="task-action-btn glass"
-        @click="emit('complete', task.id)"
+        @click="emit('complete', props.task.id)"
       >
         Complete
       </button>
 
-      <button class="task-action-btn glass" @click="emit('edit', task.id)">
+      <button class="task-action-btn glass" @click="emit('edit', props.task.id)">
         Edit
       </button>
 
       <button
         class="task-action-btn glass danger"
-        @click="emit('delete', task.id)"
+        @click="emit('delete', props.task.id)"
       >
         Delete
       </button>

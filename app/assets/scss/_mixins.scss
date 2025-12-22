@@ -1,3 +1,5 @@
+@use 'variables' as *;
+
 // Миксины для стеклоэффекта
 @mixin glass-light {
   background: rgba(255, 255, 255, $glass-opacity-light);

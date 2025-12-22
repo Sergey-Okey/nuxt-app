@@ -22,17 +22,40 @@ const emit = defineEmits<{
 .modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: $z-modal;
+  z-index: $z-index-modal;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  padding: 20px;
 }
 
 .modal-content {
   width: 100%;
-  max-width: 420px;
-  padding: 24px;
+  max-width: 480px;
+  padding: 32px;
+  border-radius: $border-radius-2xl;
+  background: var(--glass-bg-heavy);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border-medium);
+  box-shadow: $shadow-xl;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modalSlideIn $transition-base ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .fade-enter-active,

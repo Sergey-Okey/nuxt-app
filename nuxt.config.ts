@@ -56,10 +56,9 @@ export default defineNuxtConfig({
         scss: {
           // Подключаем только переменные и миксины глобально
           // Остальные стили будут через main.scss
-          additionalData: `
-            @import "~/assets/scss/_variables.scss";
-            @import "~/assets/scss/_mixins.scss";
-          `,
+          additionalData: (content: string) => {
+            return `@use "~/assets/scss/_variables.scss" as *; @use "~/assets/scss/_mixins.scss" as *;\n${content}`;
+          },
         },
       },
     },

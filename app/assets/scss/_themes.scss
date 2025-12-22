@@ -1,3 +1,6 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
 // Базовая светлая тема (по умолчанию)
 :root {
   // Цвета фона
@@ -44,7 +47,9 @@
 
 // Темная тема
 [data-theme='dark'],
-.dark-mode {
+.dark-mode,
+.dark,
+html.dark {
   // Цвета фона
   --color-bg-primary: #{$color-gray-900};
   --color-bg-secondary: #{$color-gray-800};

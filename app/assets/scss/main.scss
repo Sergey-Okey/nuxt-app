@@ -1,4 +1,4 @@
-@import 'variables';
-@import 'mixins';
-@import 'themes';
-@import 'base';
+@use 'variables' as *;
+@use 'mixins' as *;
+@use 'themes' as *;
+@use 'base' as *;
