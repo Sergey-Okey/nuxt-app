@@ -131,10 +131,16 @@ const selectOption = (option: Option) => {
   border-radius: $border-radius-xl;
   border: 1.5px solid var(--color-border-light);
   box-shadow: $shadow-xl;
-  background: var(--glass-bg-medium);
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   overflow: hidden;
+  
+  // Для темной темы используем более темный фон
+  [data-theme='dark'] &,
+  .dark &,
+  html.dark & {
+    background: rgba(0, 0, 0, 0.85);
+  }
 }
 
 .base-select-option {

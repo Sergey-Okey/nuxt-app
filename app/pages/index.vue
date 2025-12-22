@@ -204,6 +204,50 @@
         </GlassCard>
       </section>
 
+      <!-- Карточка задачи -->
+      <section class="component-section">
+        <h2 class="section-title">Карточка задачи</h2>
+        <GlassCard>
+          <div class="component-demo">
+            <div class="demo-group">
+              <h3 class="demo-title">Примеры карточек задач</h3>
+              <div class="tasks-grid">
+                <TaskCard
+                  v-for="task in demoTasks"
+                  :key="task.id"
+                  :task="task"
+                  :is-active="timeTracker.activeTaskId === task.id"
+                  @start="handleTaskStart(task.id)"
+                  @pause="timeTracker.pause()"
+                  @complete="handleTaskComplete(task.id)"
+                  @edit="handleTaskEdit(task.id)"
+                  @delete="handleTaskDelete(task.id)"
+                />
+              </div>
+            </div>
+          </div>
+        </GlassCard>
+      </section>
+
+      <!-- Таймер -->
+      <section class="component-section">
+        <h2 class="section-title">Таймер</h2>
+        <GlassCard>
+          <div class="component-demo">
+            <div class="demo-group">
+              <h3 class="demo-title">Активный таймер</h3>
+              <div v-if="timeTracker.activeTaskId" class="timer-wrapper">
+                <TimerComponent />
+              </div>
+              <div v-else class="timer-placeholder">
+                <p>Нет активного таймера</p>
+                <p class="timer-hint">Нажмите "Start" на любой карточке задачи, чтобы запустить таймер</p>
+              </div>
+            </div>
+          </div>
+        </GlassCard>
+      </section>
+
       <!-- Комплексный пример -->
       <section class="component-section">
         <h2 class="section-title">Комплексный пример</h2>
@@ -248,10 +292,16 @@
 import { ref, onMounted, computed } from 'vue'
 import { useTagsStore } from '~/stores/tags.store'
 import { useAnalyticsStore } from '~/stores/analytics.store'
+import { useTasksStore } from '~/stores/tasks.store'
+import { useCategoriesStore } from '~/stores/categories.store'
+import { useTimeTrackerStore } from '~/stores/timeTracker.store'
 
 const colorMode = useColorMode()
 const tagsStore = useTagsStore()
 const analyticsStore = useAnalyticsStore()
+const tasksStore = useTasksStore()
+const categoriesStore = useCategoriesStore()
+const timeTracker = useTimeTrackerStore()
 
 const showModal = ref(false)
 const inputValue = ref('')
@@ -277,12 +327,69 @@ const handleResetForm = () => {
   taskPriority.value = 'medium'
 }
 
+const handleTaskStart = (taskId: string) => {
+  timeTracker.start(taskId)
+}
+
+const handleTaskComplete = (taskId: string) => {
+  tasksStore.completeTask(taskId)
+}
+
+const handleTaskEdit = (taskId: string) => {
+  showModal.value = true
+}
+
+const handleTaskDelete = (taskId: string) => {
+  if (confirm('Удалить задачу?')) {
+    tasksStore.removeTask(taskId)
+  }
+}
+
+const demoTasks = computed(() => {
+  return tasksStore.tasks.slice(0, 2)
+})
+
 onMounted(() => {
   if (tagsStore.tags.length === 0) {
     tagsStore.addTag('Работа', '#3B82F6')
     tagsStore.addTag('Учеба', '#10B981')
     tagsStore.addTag('Личное', '#8B5CF6')
     tagsStore.addTag('Срочно', '#EF4444')
+  }
+
+  if (categoriesStore.categories.length === 0) {
+    categoriesStore.addCategory('Разработка', '#3B82F6')
+    categoriesStore.addCategory('Дизайн', '#8B5CF6')
+    categoriesStore.addCategory('Исследование', '#10B981')
+  }
+
+  if (tasksStore.tasks.length === 0) {
+    tasksStore.addTask({
+      title: 'Создать UI компоненты',
+      description: 'Разработать стекломорфные компоненты для приложения',
+      priority: 'high',
+      estimatedTime: 120,
+      tagIds: [tagsStore.tags[0].id, tagsStore.tags[3].id],
+      categoryId: categoriesStore.categories[0].id,
+    })
+
+    tasksStore.addTask({
+      title: 'Изучить Nuxt 4',
+      description: 'Пройти документацию по новым возможностям',
+      priority: 'medium',
+      estimatedTime: 90,
+      tagIds: [tagsStore.tags[1].id],
+      categoryId: categoriesStore.categories[2].id,
+    })
+
+    tasksStore.addTask({
+      title: 'Проектирование дизайна',
+      description: 'Создать макеты интерфейса',
+      priority: 'low',
+      estimatedTime: 60,
+      tagIds: [tagsStore.tags[1].id, tagsStore.tags[2].id],
+      categoryId: categoriesStore.categories[1].id,
+    })
   }
 })
 
@@ -513,6 +620,36 @@ const totalTimeToday = computed(() => {
   font-weight: 500;
 }
 
+.tasks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+
+  @include respond-to(sm) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.timer-wrapper {
+  width: 100%;
+}
+
+.timer-placeholder {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: var(--color-text-secondary);
+
+  p {
+    margin: 0.5rem 0;
+    font-size: $font-md;
+  }
+
+  .timer-hint {
+    font-size: $font-sm;
+    color: var(--color-text-tertiary);
+  }
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -532,3 +669,4 @@ const totalTimeToday = computed(() => {
   }
 }
 </style>
+
