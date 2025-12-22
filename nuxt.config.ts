@@ -20,10 +20,15 @@ export default defineNuxtConfig({
     },
   ],
 
+  server: {
+    port: 3000,
+    host: '0.0.0.0',
+  },
+
   modules: [
     '@vueuse/nuxt',
     '@pinia/nuxt',
-    'nuxt-icons',
+    'nuxt-icon',
     '@nuxtjs/color-mode',
     '@nuxtjs/google-fonts',
   ],
