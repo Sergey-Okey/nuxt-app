@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { Category } from '~/types/category.types'
+import { v4 as uuidv4 } from 'uuid'
 
 export const useCategoriesStore = defineStore('categories', {
   state: () => ({
@@ -9,7 +10,7 @@ export const useCategoriesStore = defineStore('categories', {
   actions: {
     addCategory(name: string, color: string) {
       this.categories.push({
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         name,
         color,
       })

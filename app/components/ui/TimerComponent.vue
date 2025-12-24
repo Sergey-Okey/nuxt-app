@@ -2,8 +2,6 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useTimeTrackerStore } from '~/stores/timeTracker.store'
 import { useTasksStore } from '~/stores/tasks.store'
-import GlassCard from './GlassCard.vue'
-import TimeDisplay from './TimeDisplay.vue'
 
 const timeTracker = useTimeTrackerStore()
 const tasksStore = useTasksStore()
@@ -77,12 +75,8 @@ const handleStop = () => {
     </div>
 
     <div class="timer-actions">
-      <button class="timer-btn pause" @click="handlePause">
-        Пауза
-      </button>
-      <button class="timer-btn stop" @click="handleStop">
-        Стоп
-      </button>
+      <button class="timer-btn pause" @click="handlePause">Пауза</button>
+      <button class="timer-btn stop" @click="handleStop">Стоп</button>
     </div>
   </GlassCard>
 </template>
@@ -155,4 +149,3 @@ const handleStop = () => {
   }
 }
 </style>
-

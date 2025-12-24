@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import type { Task } from '~/types/task.types'
 import type { TimeSession } from '~/types/time.types'
+import { v4 as uuidv4 } from 'uuid'
 
 export const useTasksStore = defineStore('tasks', {
   state: () => ({
@@ -16,7 +17,7 @@ export const useTasksStore = defineStore('tasks', {
     addTask(data: Omit<Task, 'id' | 'sessions' | 'status' | 'createdAt'>) {
       this.tasks.push({
         ...data,
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         sessions: [],
         status: 'active',
         createdAt: Date.now(),

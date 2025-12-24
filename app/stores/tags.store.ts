@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { Tag } from '~/types/tag.types'
+import { v4 as uuidv4 } from 'uuid'
 
 export const useTagsStore = defineStore('tags', {
   state: () => ({
@@ -9,7 +10,7 @@ export const useTagsStore = defineStore('tags', {
   actions: {
     addTag(label: string, color: string) {
       this.tags.push({
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         label,
         color,
       })
